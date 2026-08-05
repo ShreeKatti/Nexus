@@ -1,14 +1,14 @@
 :root {
-  --bg: #0b1220;
-  --bg-soft: #101826;
-  --panel: #141d30;
-  --panel-2: #18223a;
-  --text: #f5f7fa;
-  --muted: #91a0b8;
-  --accent: #f97316;
-  --accent-2: #fb923c;
-  --border: rgba(255, 255, 255, 0.08);
-  --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  --bg: #0F1115;
+  --bg-soft: #1A1D24;
+  --panel: #232833;
+  --panel-2: #2E3440;
+  --text: #FFFFFF;
+  --muted: #8A919E;
+  --accent: #4F8EF7;
+  --accent-2: #4F8EF7;
+  --border: rgba(255, 255, 255, 0.12);
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.38);
 }
 
 * {
@@ -18,27 +18,42 @@
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background:
-    radial-gradient(circle at top right, rgba(249, 115, 22, 0.22), transparent 18%),
-    linear-gradient(135deg, #070b14, #0c1422 60%, #09111d);
+  background: #0B0E14;
   color: var(--text);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes authIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .landing-shell {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .bg-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 26px 26px;
-  mask-image: radial-gradient(circle at center, black, transparent 80%);
+  display: none;
 }
 
 .landing-header,
@@ -49,10 +64,8 @@ body {
 }
 
 .landing-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 40px;
+  display: none;
+  animation: fadeUp 0.6s ease both;
 }
 
 .brand-row {
@@ -92,7 +105,7 @@ body {
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: linear-gradient(135deg, #4F8EF7, #6AA4FF);
   color: white;
   padding: 12px 18px;
   font-weight: 700;
@@ -111,7 +124,8 @@ body {
 .ghost-btn:hover,
 .tab-btn:hover,
 .toolbar-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(79, 142, 247, 0.22);
 }
 
 .large-btn {
@@ -120,16 +134,35 @@ body {
 
 .landing-grid {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 42px;
+  grid-template-columns: 1fr;
+  gap: 0;
   align-items: center;
-  padding: 30px 40px 60px;
-  max-width: 1280px;
-  margin: 0 auto;
+  justify-items: center;
+  padding: 0;
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  min-height: 100vh;
 }
 
 .hero-copy {
-  padding: 24px 0;
+  width: 100%;
+  padding: 0 24px;
+  animation: fadeUp 0.8s ease both;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 22px;
+  min-height: 100vh;
+  transition: filter 0.25s ease, opacity 0.25s ease;
+  background: transparent;
+}
+
+.hero-copy.blurred {
+  filter: blur(6px);
+  opacity: 0.9;
 }
 
 .eyebrow {
@@ -141,15 +174,23 @@ body {
 }
 
 .hero-copy h1 {
-  margin: 10px 0 14px;
+  margin: 0;
   font-size: clamp(3rem, 4.8vw, 4.6rem);
   line-height: 1;
 }
 
 .hero-subtext {
   color: var(--muted);
-  font-size: 1.05rem;
-  max-width: 620px;
+  font-size: 1rem;
+  max-width: 980px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'Segoe UI', 'Inter', sans-serif;
+  font-weight: 400;
+  animation: fadeUp 0.9s ease both;
+  margin: 0;
 }
 
 .hero-points {
@@ -159,6 +200,9 @@ body {
   display: grid;
   gap: 10px;
   color: #dbe5f2;
+  text-align: left;
+  width: min(620px, 100%);
+  animation: fadeUp 1s ease both;
 }
 
 .hero-points li::before {
@@ -167,19 +211,34 @@ body {
   margin-right: 10px;
 }
 
+.auth-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 6, 15, 0.32);
+  z-index: 20;
+}
+
 .auth-panel {
   display: flex;
   justify-content: center;
+  animation: fadeUp 0.7s ease both;
+  width: min(540px, 100%);
 }
 
 .auth-card {
   width: min(460px, 100%);
   padding: 26px;
-  border-radius: 22px;
-  background: rgba(8, 12, 22, 0.85);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  border-radius: 0;
+  background: rgba(8, 12, 22, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
   backdrop-filter: blur(12px);
+  animation: authIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  position: relative;
 }
 
 .auth-tabs {
@@ -203,8 +262,36 @@ body {
   color: white;
 }
 
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
 .form-header h2 {
   margin: 0;
+}
+
+.auth-message {
+  margin: 14px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.auth-message.error {
+  color: #ff8b8b;
+}
+
+.auth-message.success {
+  color: #7ef0a1;
 }
 
 .text-link {
@@ -237,8 +324,8 @@ input[type='password'] {
 
 input[type='text']:focus,
 input[type='password']:focus {
-  border-color: rgba(249, 115, 22, 0.9);
-  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.16);
+  border-color: rgba(79, 142, 247, 0.9);
+  box-shadow: 0 0 0 4px rgba(79, 142, 247, 0.16);
 }
 
 .remember-row {
@@ -262,18 +349,22 @@ input[type='password']:focus {
 .dashboard-body {
   display: flex;
   min-height: 100vh;
-  background: #08101b;
+  background:
+    radial-gradient(circle at top right, rgba(79, 142, 247, 0.18), transparent 20%),
+    linear-gradient(135deg, #0f1115, #10141c 50%, #0d1016);
   overflow-x: hidden;
 }
 
 .sidebar {
   width: 250px;
-  background: linear-gradient(180deg, #0a1020, #0d1424);
-  border-right: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(18, 20, 28, 0.98), rgba(13, 16, 24, 0.98));
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   padding: 18px 16px;
   transition: width 0.3s ease, padding 0.3s ease, opacity 0.25s ease;
   overflow: hidden;
   flex-shrink: 0;
+  backdrop-filter: blur(12px);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
 }
 
 .dashboard-body.sidebar-closed .sidebar {
@@ -300,18 +391,20 @@ input[type='password']:focus {
 }
 
 .menu-item {
-  color: #c8d4e6;
+  color: #C8CDD5;
   text-decoration: none;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 0.95rem;
   display: block;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .menu-item.active,
 .menu-item:hover {
-  background: rgba(249, 115, 22, 0.16);
+  background: linear-gradient(135deg, rgba(79, 142, 247, 0.24), rgba(79, 142, 247, 0.15));
   color: white;
+  transform: translateX(2px);
 }
 
 .connection-group {
@@ -365,8 +458,8 @@ input[type='password']:focus {
 }
 
 .connection-feature-card {
-  background: linear-gradient(180deg, rgba(8, 14, 28, 0.98), rgba(8, 12, 24, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(35, 40, 51, 0.98), rgba(20, 24, 32, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 22px 20px 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
@@ -384,7 +477,7 @@ input[type='password']:focus {
 
 .connection-feature-head p {
   margin: 6px 0 0;
-  color: #8d9eb7;
+  color: #8A919E;
   font-size: 0.98rem;
 }
 
@@ -439,8 +532,8 @@ input[type='password']:focus {
 }
 
 .filter-pill.active {
-  background: rgba(249, 115, 22, 0.14);
-  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(79, 142, 247, 0.14);
+  border-color: rgba(79, 142, 247, 0.45);
   color: #fff;
 }
 
@@ -465,13 +558,13 @@ input[type='password']:focus {
 .connection-card {
   min-height: 100px;
   padding: 20px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: linear-gradient(180deg, rgba(21, 28, 50, 0.9), rgba(13, 18, 34, 0.92));
+  background: linear-gradient(180deg, rgba(35, 40, 51, 0.92), rgba(20, 24, 32, 0.96));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
@@ -510,6 +603,9 @@ input[type='password']:focus {
   flex: 1 1 auto;
   min-width: 0;
   padding: 10px 18px 18px;
+  background:
+    radial-gradient(circle at top right, rgba(79, 142, 247, 0.08), transparent 20%),
+    transparent;
   transition: padding 0.3s ease;
 }
 
@@ -521,11 +617,12 @@ input[type='password']:focus {
   padding: 12px 16px;
   margin-bottom: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(11, 18, 34, 0.96), rgba(9, 14, 26, 0.88));
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(27, 31, 40, 0.96), rgba(18, 21, 30, 0.92));
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   flex-wrap: nowrap;
   min-height: 78px;
+  backdrop-filter: blur(14px);
 }
 
 .top-toolbar-left {
@@ -537,7 +634,7 @@ input[type='password']:focus {
 }
 
 .nav-toggle {
-  background: rgba(255, 255, 255, 0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
   color: #dbe5f2;
   border: 1px solid rgba(255, 255, 255, 0.09);
   width: 42px;
@@ -546,7 +643,7 @@ input[type='password']:focus {
   place-items: center;
   border-radius: 12px;
   font-size: 1.15rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 20px rgba(0, 0, 0, 0.18);
 }
 
 .breadcrumbs {
@@ -566,16 +663,82 @@ input[type='password']:focus {
   margin-left: auto;
 }
 
-.search-box {
-  background: rgba(255, 255, 255, 0.04);
+.profile-menu-wrap {
+  position: relative;
+}
+
+.profile-chip {
+  background: linear-gradient(135deg, rgba(79, 142, 247, 0.42), rgba(79, 142, 247, 0.22));
+  border: 1px solid rgba(79, 142, 247, 0.42);
+  border-radius: 999px;
+  padding: 0;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.22);
+}
+
+.profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  color: #111827;
+  font-weight: 800;
+}
+
+.profile-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 180px;
+  background: rgba(10, 16, 29, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #dbe5f2;
+  border-radius: 14px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  z-index: 20;
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.profile-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.profile-action-icon {
+  width: 18px;
+  text-align: center;
+}
+
+.search-box {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #C8CDD5;
   border-radius: 14px;
   padding: 11px 14px;
   min-width: 300px;
   width: 360px;
   font-size: 0.92rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
 .toolbar-btn {
@@ -593,15 +756,25 @@ input[type='password']:focus {
 }
 
 .sign-in-pill {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(251, 146, 60, 0.18));
-  border-color: rgba(249, 115, 22, 0.38);
-  color: #fff4ea;
+  background: linear-gradient(135deg, rgba(79, 142, 247, 0.24), rgba(79, 142, 247, 0.16));
+  border-color: rgba(79, 142, 247, 0.38);
+  color: #eef4ff;
 }
 
 .monitor-shell {
   display: grid;
   gap: 16px;
   margin-top: 16px;
+}
+
+.monitor-shell.empty-state {
+  min-height: calc(100vh - 200px);
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    radial-gradient(circle at top right, rgba(79, 142, 247, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(16, 20, 28, 0.98), rgba(11, 15, 21, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 40px rgba(0, 0, 0, 0.24);
 }
 
 .monitor-header {
@@ -699,7 +872,7 @@ input[type='password']:focus {
 }
 
 .line-series-b::before {
-  background-image: linear-gradient(135deg, transparent 0 40%, rgba(249, 115, 22, 0.95) 40% 43%, transparent 43% 100%);
+  background-image: linear-gradient(135deg, transparent 0 40%, rgba(79, 142, 247, 0.95) 40% 43%, transparent 43% 100%);
   mask-image: linear-gradient(to right, transparent, #fff 16%, #fff 82%, transparent);
 }
 

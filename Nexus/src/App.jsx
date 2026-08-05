@@ -21,26 +21,21 @@ function NexusLogo() {
   )
 }
 
-function LandingView({ mode, onOpenAuth, onEnterDashboard }) {
+function LandingView({ mode, showAuth, message, messageType, onOpenAuth, onCloseAuth, onEnterDashboard }) {
   return (
     <div className="landing-shell">
       <div className="bg-grid" />
 
       <header className="landing-header">
         <NexusLogo />
-        <nav className="top-actions">
-          <button className="ghost-btn" onClick={() => onOpenAuth('signin')}>Sign In</button>
-          <button className="primary-btn" onClick={() => onOpenAuth('signup')}>Sign Up</button>
-        </nav>
       </header>
 
       <main className="landing-grid">
-        <section className="hero-copy">
+        <section className={`hero-copy ${showAuth ? 'blurred' : ''}`}>
           <p className="eyebrow">Operational intelligence for teams</p>
           <h1>Welcome to Nexus</h1>
           <p className="hero-subtext">
-            A sleek observability workspace inspired by modern Grafana-style monitoring,
-            reimagined with a unique Nexus identity.
+            Unified observability and digital experience monitoring for modern IT teams.
           </p>
 
           <div className="hero-actions">
@@ -48,58 +43,68 @@ function LandingView({ mode, onOpenAuth, onEnterDashboard }) {
             <button className="ghost-btn large-btn" onClick={() => onOpenAuth('signin')}>Sign In</button>
           </div>
 
-          <ul className="hero-points">
-            <li>Realtime metrics overview</li>
-            <li>Dark-mode monitoring layout</li>
-            <li>Prototype authentication flow</li>
-          </ul>
         </section>
 
-        <section className="auth-panel">
-          <div className="auth-card">
-            <div className="auth-tabs">
-              <button className={`tab-btn ${mode === 'signin' ? 'active' : ''}`} onClick={() => onOpenAuth('signin')}>Sign In</button>
-              <button className={`tab-btn ${mode === 'signup' ? 'active' : ''}`} onClick={() => onOpenAuth('signup')}>Sign Up</button>
-            </div>
+        {showAuth && (
+          <div className="auth-popup-backdrop" onClick={onCloseAuth}>
+            <section className="auth-panel" onClick={(event) => event.stopPropagation()}>
+              <div className="auth-card">
+                <button type="button" className="close-btn" onClick={onCloseAuth} aria-label="Close authentication panel">
+                  ×
+                </button>
 
-            <div className="form-header">
-              <h2>{mode === 'signin' ? 'Sign in to Nexus' : 'Create your Nexus account'}</h2>
-            </div>
+                <div className="auth-tabs">
+                  <button className={`tab-btn ${mode === 'signin' ? 'active' : ''}`} onClick={() => onOpenAuth('signin')}>Sign In</button>
+                  <button className={`tab-btn ${mode === 'signup' ? 'active' : ''}`} onClick={() => onOpenAuth('signup')}>Sign Up</button>
+                </div>
 
-            <form onSubmit={onEnterDashboard} className="auth-form">
-              <label>
-                <span>Username</span>
-                <input name="username" type="text" placeholder="" required />
-              </label>
+                <div className="form-header">
+                  <h2>{mode === 'signin' ? 'Sign in to Nexus' : 'Create your Nexus account'}</h2>
+                </div>
 
-              <label>
-                <span>Password</span>
-                <input name="password" type="password" placeholder="" required />
-              </label>
+                {message && <p className={`auth-message ${messageType}`}>{message}</p>}
 
-              <div className="remember-row">
-                <label className="checkbox">
-                  <input type="checkbox" defaultChecked />
-                  <span>Remember me</span>
-                </label>
-                <a href="#" className="text-link">Forgot password?</a>
+                <form onSubmit={onEnterDashboard} className="auth-form">
+                  <label>
+                    <span>Username</span>
+                    <input name="username" type="text" placeholder="" required />
+                  </label>
+
+                  <label>
+                    <span>Password</span>
+                    <input name="password" type="password" placeholder="" required />
+                  </label>
+
+                  <div className="remember-row">
+                    <label className="checkbox">
+                      <input type="checkbox" defaultChecked />
+                      <span>Remember me</span>
+                    </label>
+                    <a href="#" className="text-link">Forgot password?</a>
+                  </div>
+
+                  <button type="submit" className="primary-btn full-width">
+                    {mode === 'signin' ? 'Continue' : 'Create account'}
+                  </button>
+                </form>
               </div>
-
-              <button type="submit" className="primary-btn full-width">
-                {mode === 'signin' ? 'Continue' : 'Create account'}
-              </button>
-            </form>
+            </section>
           </div>
-        </section>
+        )}
       </main>
     </div>
   )
 }
 
-function DashboardView() {
+function DashboardView({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [connectionsOpen, setConnectionsOpen] = useState(false)
   const [showConnectionForm, setShowConnectionForm] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+
+  const currentUser = JSON.parse(localStorage.getItem('nexus-demo-user') || '{}')
+  const username = currentUser.username || 'Nexus'
+  const userInitial = username.charAt(0).toUpperCase()
 
   const datasourceCards = [
     { name: 'InfluxDB', badge: 'DB' },
@@ -155,7 +160,36 @@ function DashboardView() {
           </div>
           <div className="toolbar-controls">
             <input className="search-box" type="text" placeholder="Search..." />
-            <button className="toolbar-btn sign-in-pill">Sign in</button>
+
+            <div className="profile-menu-wrap">
+              <button
+                type="button"
+                className="profile-chip"
+                onClick={() => setProfileOpen((open) => !open)}
+              >
+                <span className="profile-avatar">{userInitial}</span>
+              </button>
+
+              {profileOpen && (
+                <div className="profile-dropdown">
+                  <button type="button" className="profile-dropdown-item" onClick={() => setProfileOpen(false)}>
+                    <span className="profile-action-icon">👤</span>
+                    <span>Account</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-dropdown-item"
+                    onClick={() => {
+                      setProfileOpen(false)
+                      onLogout()
+                    }}
+                  >
+                    <span className="profile-action-icon">⎋</span>
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -208,11 +242,30 @@ function DashboardView() {
 function App() {
   const [view, setView] = useState('landing')
   const [mode, setMode] = useState('signin')
+  const [showAuth, setShowAuth] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('error')
 
   const openAuth = (nextMode) => {
     setMode(nextMode)
+    setShowAuth(true)
     setView('landing')
+    setMessage('')
+    setMessageType('error')
+  }
+
+  const closeAuth = () => {
+    setShowAuth(false)
+    setMessage('')
+    setMessageType('error')
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('nexus-demo-user')
+    setView('landing')
+    setShowAuth(false)
+    setMessage('')
+    setMessageType('error')
   }
 
   const handleAuthSubmit = (event) => {
@@ -223,29 +276,59 @@ function App() {
 
     if (!username || !password) {
       setMessage('Please enter both a username and password.')
+      setMessageType('error')
       return
     }
 
-    if (mode === 'signin') {
-      const isValid = username === DEMO_CREDENTIALS.username && password === DEMO_CREDENTIALS.password
-      if (!isValid) {
-        setMessage('Authentication failed.')
+    if (mode === 'signup') {
+      const existingUsers = JSON.parse(localStorage.getItem('nexus-demo-users') || '[]')
+      const userExists = existingUsers.some((entry) => entry.username === username)
+
+      if (userExists) {
+        setMessage('Username already exists. Please sign in or choose another username.')
+        setMessageType('error')
         return
       }
+
+      existingUsers.push({ username, password })
+      localStorage.setItem('nexus-demo-users', JSON.stringify(existingUsers))
+      localStorage.setItem('nexus-demo-user', JSON.stringify({ username, password }))
+
+      setMode('signin')
+      setMessage('Account created successfully. Please sign in.')
+      setMessageType('success')
+      form.reset()
+      return
+    }
+
+    const persistedUsers = JSON.parse(localStorage.getItem('nexus-demo-users') || '[]')
+    const isDemoUser = username === DEMO_CREDENTIALS.username && password === DEMO_CREDENTIALS.password
+    const isPersistedUser = persistedUsers.some((entry) => entry.username === username && entry.password === password)
+
+    if (!isDemoUser && !isPersistedUser) {
+      setMessage('Invalid username or password.')
+      setMessageType('error')
+      return
     }
 
     localStorage.setItem('nexus-demo-user', JSON.stringify({ username, password }))
+    setMessage('')
+    setMessageType('error')
     setView('dashboard')
   }
 
   return (
     <>
       {view === 'dashboard' ? (
-        <DashboardView />
+        <DashboardView onLogout={handleLogout} />
       ) : (
         <LandingView
           mode={mode}
+          showAuth={showAuth}
+          message={message}
+          messageType={messageType}
           onOpenAuth={openAuth}
+          onCloseAuth={closeAuth}
           onEnterDashboard={handleAuthSubmit}
         />
       )}
