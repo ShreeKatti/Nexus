@@ -36,10 +36,10 @@ function LandingView({ mode, showAuth, message, messageType, showSignupSuccess, 
 
       <main className="landing-grid">
         <section className={`hero-copy ${showAuth ? 'blurred' : ''}`}>
-          <p className="eyebrow">Operational intelligence for teams</p>
-          <h1>Welcome to Nexus</h1>
+          <p className="eyebrow">AI Powered Wissen Platform</p>
+          <h1>Welcome to Wissen Nexus </h1>
           <p className="hero-subtext">
-            Unified observability and digital experience monitoring for modern IT teams.
+            Unified observability and digital experience for modern IT.
           </p>
 
           <div className="hero-actions">
@@ -117,21 +117,120 @@ function DashboardView({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [connectionsOpen, setConnectionsOpen] = useState(false)
   const [showConnectionForm, setShowConnectionForm] = useState(false)
+  const [showDatasources, setShowDatasources] = useState(false)
+  const [selectedDatasource, setSelectedDatasource] = useState(null)
+  const [connectionStatus, setConnectionStatus] = useState(null)
+  const [connectionSearch, setConnectionSearch] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [savedDatasources, setSavedDatasources] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('nexus-datasources') || '[]')
+    } catch {
+      return []
+    }
+  })
 
   const currentUser = JSON.parse(localStorage.getItem('nexus-demo-user') || '{}')
   const username = currentUser.username || 'Nexus'
   const userInitial = username.charAt(0).toUpperCase()
 
   const datasourceCards = [
-    { name: 'SolarWinds', logoUrl: solarWindsLogo },
-    { name: 'Cato', logoUrl: catoLogo },
-    { name: 'Site24x7', logoUrl: site24x7Logo },
-    { name: 'Microsoft SQL Server', logoUrl: microsoftSqlServerLogo },
+    {
+      name: 'SolarWinds SWIS API',
+      logoUrl: solarWindsLogo,
+      authType: 'basic',
+      description: 'Connect to the SolarWinds Information Service (SWIS) API.',
+      endpointLabel: 'Server URL',
+      endpointPlaceholder: 'https://solarwinds.example.com',
+      endpointHint: 'Enter only the scheme and host. Nexus uses the SWIS API on port 17774 automatically.',
+    },
+    {
+      name: 'Cato',
+      logoUrl: catoLogo,
+      authType: 'basic',
+      description: 'Connect to your Cato SASE account with an API key.',
+      endpointLabel: 'API URL',
+      endpointPlaceholder: 'https://api.catonetworks.com/api/v1',
+      endpointHint: 'Use the Cato API endpoint for your account and a read-only API key where possible.',
+    },
+    {
+      name: 'Site24x7',
+      logoUrl: site24x7Logo,
+      authType: 'basic',
+      description: 'Import monitoring data from Site24x7 using an API key.',
+      endpointLabel: 'API URL',
+      endpointPlaceholder: 'https://www.site24x7.com/api',
+      endpointHint: 'Use the Site24x7 API endpoint that applies to your account region.',
+    },
+    {
+      name: 'Microsoft SQL Server',
+      logoUrl: microsoftSqlServerLogo,
+      authType: 'basic',
+      description: 'Connect to a Microsoft SQL Server database.',
+      endpointLabel: 'Server',
+      endpointPlaceholder: 'sql.example.com',
+      endpointHint: 'Provide the SQL Server host name or IP address. Use a dedicated read-only account.',
+    },
   ]
 
+  const openDatasourceConfiguration = (datasource) => {
+    setSelectedDatasource(datasource)
+    setConnectionStatus(null)
+  }
+
+  const filteredDatasourceCards = datasourceCards.filter((datasource) => (
+    datasource.name.toLowerCase().includes(connectionSearch.trim().toLowerCase())
+  ))
+
+  const returnToConnections = () => {
+    setSelectedDatasource(null)
+    setConnectionStatus(null)
+  }
+
+  const saveAndTestConnection = (event) => {
+    event.preventDefault()
+    const values = new FormData(event.currentTarget)
+    const requiredFields = ['username', 'password']
+
+    if (requiredFields.some((field) => !values.get(field)?.trim())) {
+      setConnectionStatus({ type: 'error', text: 'Complete all required connection details before testing.' })
+      return
+    }
+
+    setConnectionStatus({
+      type: 'success',
+      text: 'Configuration saved.',
+    })
+
+    const datasource = {
+      id: `${selectedDatasource.name}-${Date.now()}`,
+      name: values.get('name').trim(),
+      type: selectedDatasource.name,
+      endpoint: values.get('endpoint').trim(),
+      logoUrl: selectedDatasource.logoUrl,
+      configuredAt: new Date().toLocaleString(),
+      demoData: {
+        hosts: 3,
+        metrics: 12,
+        status: 'Demo data imported',
+      },
+    }
+
+    setSavedDatasources((sources) => {
+      const nextSources = [...sources.filter((source) => source.name !== datasource.name), datasource]
+      localStorage.setItem('nexus-datasources', JSON.stringify(nextSources))
+      return nextSources
+    })
+    setSelectedDatasource(null)
+    setShowConnectionForm(false)
+    setShowDatasources(true)
+  }
+
   return (
-    <div className={`dashboard-body ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+    <div
+      className={`dashboard-body ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}
+      onClick={() => setProfileOpen(false)}
+    >
       <aside className="sidebar">
         <div className="sidebar-top">
           <NexusLogo />
@@ -140,10 +239,13 @@ function DashboardView({ onLogout }) {
         <nav className="sidebar-menu">
           <button
             type="button"
-            className={`menu-item ${showConnectionForm ? '' : 'active'}`}
+            className={`menu-item ${!showConnectionForm && !showDatasources ? 'active' : ''}`}
             onClick={() => {
               setShowConnectionForm(false)
+              setShowDatasources(false)
               setConnectionsOpen(false)
+              setSelectedDatasource(null)
+              setConnectionStatus(null)
             }}
           >
             Home
@@ -166,7 +268,11 @@ function DashboardView({ onLogout }) {
                   className="submenu-item"
                   onClick={() => {
                     setShowConnectionForm(true)
+                    setShowDatasources(false)
                     setConnectionsOpen(false)
+                    setSelectedDatasource(null)
+                    setConnectionStatus(null)
+                    setConnectionSearch('')
                   }}
                 >
                   Add New Connection
@@ -175,7 +281,19 @@ function DashboardView({ onLogout }) {
             )}
           </div>
 
-          <a className="menu-item" href="#">Datasource</a>
+          <button
+            type="button"
+            className={`menu-item ${showDatasources ? 'active' : ''}`}
+            onClick={() => {
+              setShowDatasources(true)
+              setShowConnectionForm(false)
+              setSelectedDatasource(null)
+              setConnectionStatus(null)
+              setConnectionsOpen(false)
+            }}
+          >
+            Datasource
+          </button>
         </nav>
       </aside>
 
@@ -196,7 +314,7 @@ function DashboardView({ onLogout }) {
           <div className="toolbar-controls">
             <input className="search-box" type="text" placeholder="Search..." />
 
-            <div className="profile-menu-wrap">
+            <div className="profile-menu-wrap" onClick={(event) => event.stopPropagation()}>
               <button
                 type="button"
                 className="profile-chip"
@@ -228,7 +346,7 @@ function DashboardView({ onLogout }) {
           </div>
         </header>
 
-        {showConnectionForm && (
+        {showConnectionForm && !selectedDatasource && (
           <section className="connection-feature-card">
             <div className="connection-feature-head">
               <div>
@@ -240,7 +358,33 @@ function DashboardView({ onLogout }) {
             <div className="connection-search-row">
               <div className="connection-search-box">
                 <span className="search-icon">⌕</span>
-                <input type="text" placeholder="Search connections" />
+                <input
+                  type="text"
+                  value={connectionSearch}
+                  onChange={(event) => setConnectionSearch(event.target.value)}
+                  placeholder="Search connections"
+                  aria-label="Search connections"
+                />
+
+                {connectionSearch && (
+                  <div className="connection-suggestions">
+                    {filteredDatasourceCards.length ? (
+                      filteredDatasourceCards.map((card) => (
+                        <button
+                          type="button"
+                          key={card.name}
+                          className="connection-suggestion"
+                          onClick={() => openDatasourceConfiguration(card)}
+                        >
+                          <img src={card.logoUrl} alt="" />
+                          <span>{card.name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <p>No matching connections found.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -254,8 +398,13 @@ function DashboardView({ onLogout }) {
               </div>
 
               <div className="connection-card-grid">
-                {datasourceCards.map((card) => (
-                  <article key={card.name} className="connection-card">
+                {filteredDatasourceCards.map((card) => (
+                  <button
+                    type="button"
+                    key={card.name}
+                    className={`connection-card ${card.name === 'SolarWinds SWIS API' ? 'connection-card-wide' : ''}`}
+                    onClick={() => openDatasourceConfiguration(card)}
+                  >
                     <div className="connection-card-left">
                       <div className="connection-logo">
                         <img src={card.logoUrl} alt={`${card.name} logo`} />
@@ -263,31 +412,183 @@ function DashboardView({ onLogout }) {
                       <span>{card.name}</span>
                     </div>
                     <div className="connection-check">✓</div>
-                  </article>
+                  </button>
                 ))}
+                {!filteredDatasourceCards.length && (
+                  <p className="connection-empty-results">Try a different connection name.</p>
+                )}
               </div>
             </div>
           </section>
         )}
 
-        {!showConnectionForm && (
+        {showConnectionForm && selectedDatasource && (
+          <section className="datasource-config-card">
+            <button type="button" className="back-to-connections" onClick={returnToConnections}>
+              ← All connections
+            </button>
+
+            <div className="datasource-config-heading">
+              <div className="datasource-config-logo">
+                <img src={selectedDatasource.logoUrl} alt={`${selectedDatasource.name} logo`} />
+              </div>
+              <div>
+                <p>DATA SOURCE</p>
+                <h2>Configure {selectedDatasource.name}</h2>
+                <span>{selectedDatasource.description}</span>
+              </div>
+            </div>
+
+            <form className="datasource-config-form" onSubmit={saveAndTestConnection}>
+              <div className="config-section">
+                <h3>Settings</h3>
+                <label>
+                  <span>Name <em>*</em></span>
+                  <input name="name" type="text" defaultValue={selectedDatasource.name} required />
+                  <small>A unique name for this data source in Nexus.</small>
+                </label>
+                <label className="config-switch-row">
+                  <span>
+                    <strong>Default data source</strong>
+                    <small>Use this source by default for new dashboards.</small>
+                  </span>
+                  <input name="isDefault" type="checkbox" />
+                </label>
+              </div>
+
+              <div className="config-section">
+                <h3>Connection</h3>
+                <label>
+                  <span>{selectedDatasource.endpointLabel}</span>
+                  <input name="endpoint" type="text" defaultValue={selectedDatasource.endpointPlaceholder} />
+                  <small>{selectedDatasource.endpointHint}</small>
+                </label>
+
+                {selectedDatasource.authType === 'sql' && (
+                  <div className="config-field-grid">
+                    <label>
+                      <span>Port</span>
+                      <input name="port" type="number" placeholder="1433" />
+                    </label>
+                    <label>
+                      <span>Database</span>
+                      <input name="database" type="text" placeholder="master" />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div className="config-section">
+                <h3>Authentication</h3>
+                {selectedDatasource.authType === 'apiKey' ? (
+                  <label>
+                    <span>API key <em>*</em></span>
+                    <input name="apiKey" type="password" placeholder="Enter API key" required />
+                    <small>Use an API key with the minimum read permissions needed.</small>
+                  </label>
+                ) : (
+                  <div className="config-field-grid">
+                    <label>
+                      <span>Username <em>*</em></span>
+                      <input name="username" type="text" autoComplete="username" required />
+                    </label>
+                    <label>
+                      <span>Password <em>*</em></span>
+                      <input name="password" type="password" autoComplete="current-password" required />
+                    </label>
+                  </div>
+                )}
+                <label className="config-check-row">
+                  <input name="skipTlsValidation" type="checkbox" />
+                  <span>Skip TLS certificate validation</span>
+                </label>
+              </div>
+
+              {connectionStatus && (
+                <div className={`connection-status ${connectionStatus.type}`} role="status">
+                  {connectionStatus.text}
+                </div>
+              )}
+
+              <div className="config-actions">
+                <button type="button" className="config-cancel" onClick={returnToConnections}>Cancel</button>
+                <button type="submit" className="config-save">Save &amp; test</button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {showDatasources && (
+          <section className="datasource-list-card">
+            <div className="datasource-list-header">
+              <div>
+                <p>CONNECTIONS</p>
+                <h2>Data sources</h2>
+                <span>Manage the data sources available to your Nexus dashboards.</span>
+              </div>
+              <button
+                type="button"
+                className="overview-action"
+                onClick={() => {
+                  setShowDatasources(false)
+                  setShowConnectionForm(true)
+                }}
+              >
+                <span>+</span> Add data source
+              </button>
+            </div>
+
+            {savedDatasources.length ? (
+              <div className="saved-datasource-grid">
+                {savedDatasources.map((datasource) => (
+                  <article key={datasource.id} className="saved-datasource-card">
+                    <div className="saved-datasource-logo">
+                      <img src={datasource.logoUrl} alt={`${datasource.type} logo`} />
+                    </div>
+                    <div className="saved-datasource-details">
+                      <h3>{datasource.name}</h3>
+                      <span>{datasource.type}</span>
+                      <small>{datasource.endpoint}</small>
+                    </div>
+                    <div className="saved-datasource-status">
+                      <span>Configured</span>
+                      <small>{datasource.configuredAt}</small>
+                    </div>
+                    <div className="saved-datasource-demo">
+                      <span>{datasource.demoData?.status || 'Demo data imported'}</span>
+                      <small>{datasource.demoData?.hosts || 3} hosts · {datasource.demoData?.metrics || 12} metrics</small>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="datasource-empty-state">
+                <div>+</div>
+                <h3>No data sources yet</h3>
+                <p>Add a connection, enter its authentication details, and save it here.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {!showConnectionForm && !showDatasources && (
           <section className="monitor-shell empty-state">
             <div className="overview-header">
               <div>
                 <p className="overview-eyebrow">Observability workspace</p>
-                <h1>Good morning, {username}</h1>
+                <h1>Hello, {username}</h1>
                 <p>Connect a data source to start bringing your infrastructure into focus.</p>
               </div>
-              <button type="button" className="overview-action" onClick={() => setShowConnectionForm(true)}>
+              {/* <button type="button" className="overview-action" onClick={() => setShowConnectionForm(true)}>
                 <span>+</span> Add connection
-              </button>
+              </button> */}
             </div>
 
             <div className="overview-stats">
               <article className="overview-stat">
                 <span className="stat-label">Data sources</span>
-                <strong>0</strong>
-                <span className="stat-caption">Connect your first source</span>
+                <strong>{savedDatasources.length}</strong>
+                <span className="stat-caption">{savedDatasources.length ? 'Ready to use' : 'Connect your first source'}</span>
               </article>
               <article className="overview-stat">
                 <span className="stat-label">Services monitored</span>
