@@ -1664,6 +1664,20 @@ button:not(:disabled):active,
   grid-column: 1 / -1;
 }
 
+.connection-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.connection-card {
+  min-height: 92px;
+}
+
+@media (max-width: 720px) {
+  .connection-card-grid { grid-template-columns: 1fr; }
+  .connection-card-wide { grid-column: auto; }
+}
+
 .datasource-config-card {
   max-width: 900px;
   padding: 28px;
@@ -2079,6 +2093,272 @@ button:not(:disabled):active,
 
   .search-box {
     width: auto;
+    max-width: none;
+  }
+}
+
+/* Date range picker and insights */
+.overview-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.date-range-btn {
+  background: linear-gradient(135deg, rgba(120, 93, 224, 0.28), rgba(120, 93, 224, 0.16));
+  border-color: rgba(120, 93, 224, 0.5);
+  color: #e9e4ff;
+  white-space: nowrap;
+}
+
+.date-range-btn:hover {
+  box-shadow: 0 8px 18px rgba(120, 93, 224, 0.28);
+  transform: translateY(-1px);
+}
+
+.date-range-popup {
+  position: relative;
+  z-index: 40;
+  max-width: 420px;
+  margin-top: 14px;
+  padding: 20px;
+  border: 1px solid #3d3850;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #1c1926, #15131d);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.42);
+  animation: menu-enter 0.2s ease both;
+}
+
+.date-range-popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.date-range-popup-head h3 {
+  margin: 0;
+  color: #f5f2fb;
+  font-size: 1.02rem;
+}
+
+.date-range-close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #4a4358;
+  border-radius: 8px;
+  background: transparent;
+  color: #c9c2d8;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.date-range-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.date-range-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.date-range-fields label {
+  display: grid;
+  gap: 7px;
+}
+
+.date-range-fields label span {
+  margin: 0;
+  color: #ded9e9;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.date-range-fields input[type='date'] {
+  width: 100%;
+  border: 1px solid #403a4d;
+  border-radius: 10px;
+  background: #201e28;
+  color: #f2eff8;
+  outline: none;
+  padding: 11px 12px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  color-scheme: dark;
+}
+
+.date-range-fields input[type='date']:focus {
+  border-color: #8068e1;
+  box-shadow: 0 0 0 3px rgba(125, 98, 223, 0.14);
+}
+
+.date-range-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.date-range-actions button {
+  border-radius: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.date-range-clear {
+  border: 1px solid #464053;
+  background: transparent;
+  color: #d0cadf;
+}
+
+.date-range-clear:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.date-range-apply {
+  border: 1px solid #7c62df;
+  background: linear-gradient(135deg, #7a5ee0, #5b43bb);
+  color: #fff;
+}
+
+.date-range-apply:hover {
+  box-shadow: 0 6px 16px rgba(91, 66, 186, 0.3);
+}
+
+.insights-section {
+  margin-top: 26px;
+  animation: panel-enter 0.35s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.insights-header {
+  margin-bottom: 16px;
+}
+
+.insights-header h2 {
+  margin: 0;
+  color: #fbfaff;
+  font-size: 1.35rem;
+  letter-spacing: -0.035em;
+}
+
+.insights-header span {
+  display: block;
+  margin-top: 6px;
+  color: #a9a4b5;
+  font-size: 0.86rem;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.insight-card {
+  padding: 18px;
+  border: 1px solid #302d3a;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(38, 35, 48, 0.86), rgba(24, 22, 31, 0.9));
+}
+
+.insight-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.insight-card-head h3 {
+  margin: 0;
+  color: #f2effa;
+  font-size: 0.95rem;
+}
+
+.insight-badge {
+  padding: 4px 9px;
+  border: 1px solid rgba(120, 93, 224, 0.4);
+  border-radius: 999px;
+  background: rgba(120, 93, 224, 0.14);
+  color: #c4b7ff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.insight-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 150px;
+  padding: 12px 10px 0;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 30px),
+    rgba(255, 255, 255, 0.015);
+}
+
+.insight-bar {
+  flex: 1;
+  min-width: 0;
+  border-radius: 5px 5px 2px 2px;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.insight-bar:hover {
+  transform: scaleY(1.04);
+  filter: brightness(1.2);
+}
+
+.insight-chart-cpu .insight-bar {
+  background: linear-gradient(180deg, #7ee4b0, #2f9e6a);
+}
+
+.insight-chart-memory .insight-bar {
+  background: linear-gradient(180deg, #8b7cf6, #5b43bb);
+}
+
+.insight-chart-network .insight-bar {
+  background: linear-gradient(180deg, #6ab7ff, #2f6fd0);
+}
+
+.insight-chart-disk .insight-bar {
+  background: linear-gradient(180deg, #f9a15c, #d96a2b);
+}
+
+.insight-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: #777280;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 900px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .overview-actions {
+    width: 100%;
+  }
+
+  .date-range-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .date-range-popup {
     max-width: none;
   }
 }

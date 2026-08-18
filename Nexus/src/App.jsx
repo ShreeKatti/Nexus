@@ -4,6 +4,11 @@ import solarWindsLogo from './assets/integrations/solarwinds.png'
 import catoLogo from './assets/integrations/cato.png'
 import site24x7Logo from './assets/integrations/site24x7.png'
 import microsoftSqlServerLogo from './assets/integrations/microsoft-sql-server.png'
+import mysqlLogo from './assets/integrations/mysql.svg'
+import postgresqlLogo from './assets/integrations/postgresql.svg'
+import prometheusLogo from './assets/integrations/prometheus.svg'
+import grafanaLogo from './assets/integrations/grafana.svg'
+import cloudWatchLogo from './assets/integrations/cloudwatch.svg'
 
 const DEMO_CREDENTIALS = {
   username: 'nexusadmin',
@@ -122,6 +127,8 @@ function DashboardView({ onLogout }) {
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [connectionSearch, setConnectionSearch] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [showDateRangePicker, setShowDateRangePicker] = useState(false)
+  const [dateRange, setDateRange] = useState(null)
   const [savedDatasources, setSavedDatasources] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('nexus-datasources') || '[]')
@@ -170,6 +177,51 @@ function DashboardView({ onLogout }) {
       endpointLabel: 'Server',
       endpointPlaceholder: 'sql.example.com',
       endpointHint: 'Provide the SQL Server host name or IP address. Use a dedicated read-only account.',
+    },
+    {
+      name: 'MySQL',
+      logoUrl: mysqlLogo,
+      authType: 'basic',
+      description: 'Connect to a MySQL database with a dedicated read-only account.',
+      endpointLabel: 'Server',
+      endpointPlaceholder: 'mysql.example.com',
+      endpointHint: 'Provide the MySQL host name or IP address.',
+    },
+    {
+      name: 'PostgreSQL',
+      logoUrl: postgresqlLogo,
+      authType: 'basic',
+      description: 'Connect to a PostgreSQL database with a dedicated read-only account.',
+      endpointLabel: 'Server',
+      endpointPlaceholder: 'postgres.example.com',
+      endpointHint: 'Provide the PostgreSQL host name or IP address.',
+    },
+    {
+      name: 'Prometheus',
+      logoUrl: prometheusLogo,
+      authType: 'basic',
+      description: 'Connect to a Prometheus server to query metrics.',
+      endpointLabel: 'Server URL',
+      endpointPlaceholder: 'http://prometheus.example.com:9090',
+      endpointHint: 'Enter the base URL for your Prometheus server.',
+    },
+    {
+      name: 'Grafana',
+      logoUrl: grafanaLogo,
+      authType: 'basic',
+      description: 'Connect to a Grafana instance and import dashboard metadata.',
+      endpointLabel: 'Grafana URL',
+      endpointPlaceholder: 'https://grafana.example.com',
+      endpointHint: 'Enter the base URL of your Grafana instance.',
+    },
+    {
+      name: 'AWS CloudWatch',
+      logoUrl: cloudWatchLogo,
+      authType: 'basic',
+      description: 'Connect to AWS CloudWatch to bring cloud metrics into Nexus.',
+      endpointLabel: 'AWS endpoint',
+      endpointPlaceholder: 'https://monitoring.ap-south-1.amazonaws.com',
+      endpointHint: 'Use the CloudWatch endpoint for your AWS region.',
     },
   ]
 
@@ -402,7 +454,7 @@ function DashboardView({ onLogout }) {
                   <button
                     type="button"
                     key={card.name}
-                    className={`connection-card ${card.name === 'SolarWinds SWIS API' ? 'connection-card-wide' : ''}`}
+                    className="connection-card"
                     onClick={() => openDatasourceConfiguration(card)}
                   >
                     <div className="connection-card-left">
@@ -579,10 +631,73 @@ function DashboardView({ onLogout }) {
                 <h1>Hello, {username}</h1>
                 <p>Connect a data source to start bringing your infrastructure into focus.</p>
               </div>
-              {/* <button type="button" className="overview-action" onClick={() => setShowConnectionForm(true)}>
-                <span>+</span> Add connection
-              </button> */}
+              <div className="overview-actions">
+                <button type="button" className="overview-action" onClick={() => setShowConnectionForm(true)}>
+                  <span>+</span> Add connection
+                </button>
+                <button
+                  type="button"
+                  className="overview-action date-range-btn"
+                  onClick={() => setShowDateRangePicker((open) => !open)}
+                >
+                  <span>📅</span>
+                  {dateRange ? `${dateRange.start} → ${dateRange.end}` : 'Date range'}
+                </button>
+              </div>
             </div>
+
+            {showDateRangePicker && (
+              <div className="date-range-popup" onClick={(event) => event.stopPropagation()}>
+                <div className="date-range-popup-head">
+                  <h3>Select date range</h3>
+                  <button
+                    type="button"
+                    className="date-range-close"
+                    onClick={() => setShowDateRangePicker(false)}
+                    aria-label="Close date range picker"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="date-range-fields">
+                  <label>
+                    <span>From</span>
+                    <input
+                      type="date"
+                      defaultValue={dateRange?.start || ''}
+                      onChange={(event) => setDateRange((range) => ({ ...(range || {}), start: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    <span>To</span>
+                    <input
+                      type="date"
+                      defaultValue={dateRange?.end || ''}
+                      onChange={(event) => setDateRange((range) => ({ ...(range || {}), end: event.target.value }))}
+                    />
+                  </label>
+                </div>
+                <div className="date-range-actions">
+                  <button
+                    type="button"
+                    className="date-range-clear"
+                    onClick={() => {
+                      setDateRange(null)
+                      setShowDateRangePicker(false)
+                    }}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    className="date-range-apply"
+                    onClick={() => setShowDateRangePicker(false)}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="overview-stats">
               <article className="overview-stat">
@@ -601,6 +716,120 @@ function DashboardView({ onLogout }) {
                 <span className="stat-caption">Everything looks quiet</span>
               </article>
             </div>
+
+            {dateRange && (
+              <section className="insights-section">
+                <div className="insights-header">
+                  <div>
+                    <p className="overview-eyebrow">Insights</p>
+                    <h2>Telemetry from {dateRange.start} to {dateRange.end}</h2>
+                    <span>Showing metrics across {savedDatasources.length || 1} data source{savedDatasources.length === 1 ? '' : 's'}</span>
+                  </div>
+                </div>
+
+                <div className="insights-grid">
+                  <article className="insight-card">
+                    <div className="insight-card-head">
+                      <h3>CPU Utilization</h3>
+                      <span className="insight-badge">%</span>
+                    </div>
+                    <div className="insight-chart insight-chart-cpu">
+                      <div className="insight-bar" style={{ height: '42%' }} />
+                      <div className="insight-bar" style={{ height: '58%' }} />
+                      <div className="insight-bar" style={{ height: '35%' }} />
+                      <div className="insight-bar" style={{ height: '72%' }} />
+                      <div className="insight-bar" style={{ height: '48%' }} />
+                      <div className="insight-bar" style={{ height: '64%' }} />
+                      <div className="insight-bar" style={{ height: '38%' }} />
+                      <div className="insight-bar" style={{ height: '55%' }} />
+                      <div className="insight-bar" style={{ height: '80%' }} />
+                      <div className="insight-bar" style={{ height: '46%' }} />
+                      <div className="insight-bar" style={{ height: '62%' }} />
+                      <div className="insight-bar" style={{ height: '50%' }} />
+                    </div>
+                    <div className="insight-chart-labels">
+                      <span>Start</span>
+                      <span>End</span>
+                    </div>
+                  </article>
+
+                  <article className="insight-card">
+                    <div className="insight-card-head">
+                      <h3>Memory Usage</h3>
+                      <span className="insight-badge">GB</span>
+                    </div>
+                    <div className="insight-chart insight-chart-memory">
+                      <div className="insight-bar" style={{ height: '30%' }} />
+                      <div className="insight-bar" style={{ height: '45%' }} />
+                      <div className="insight-bar" style={{ height: '38%' }} />
+                      <div className="insight-bar" style={{ height: '62%' }} />
+                      <div className="insight-bar" style={{ height: '50%' }} />
+                      <div className="insight-bar" style={{ height: '70%' }} />
+                      <div className="insight-bar" style={{ height: '44%' }} />
+                      <div className="insight-bar" style={{ height: '58%' }} />
+                      <div className="insight-bar" style={{ height: '66%' }} />
+                      <div className="insight-bar" style={{ height: '40%' }} />
+                      <div className="insight-bar" style={{ height: '52%' }} />
+                      <div className="insight-bar" style={{ height: '60%' }} />
+                    </div>
+                    <div className="insight-chart-labels">
+                      <span>Start</span>
+                      <span>End</span>
+                    </div>
+                  </article>
+
+                  <article className="insight-card">
+                    <div className="insight-card-head">
+                      <h3>Network Traffic</h3>
+                      <span className="insight-badge">Mbps</span>
+                    </div>
+                    <div className="insight-chart insight-chart-network">
+                      <div className="insight-bar" style={{ height: '55%' }} />
+                      <div className="insight-bar" style={{ height: '40%' }} />
+                      <div className="insight-bar" style={{ height: '68%' }} />
+                      <div className="insight-bar" style={{ height: '35%' }} />
+                      <div className="insight-bar" style={{ height: '75%' }} />
+                      <div className="insight-bar" style={{ height: '48%' }} />
+                      <div className="insight-bar" style={{ height: '60%' }} />
+                      <div className="insight-bar" style={{ height: '42%' }} />
+                      <div className="insight-bar" style={{ height: '70%' }} />
+                      <div className="insight-bar" style={{ height: '52%' }} />
+                      <div className="insight-bar" style={{ height: '38%' }} />
+                      <div className="insight-bar" style={{ height: '64%' }} />
+                    </div>
+                    <div className="insight-chart-labels">
+                      <span>Start</span>
+                      <span>End</span>
+                    </div>
+                  </article>
+
+                  <article className="insight-card">
+                    <div className="insight-card-head">
+                      <h3>Disk I/O</h3>
+                      <span className="insight-badge">IOPS</span>
+                    </div>
+                    <div className="insight-chart insight-chart-disk">
+                      <div className="insight-bar" style={{ height: '48%' }} />
+                      <div className="insight-bar" style={{ height: '62%' }} />
+                      <div className="insight-bar" style={{ height: '36%' }} />
+                      <div className="insight-bar" style={{ height: '70%' }} />
+                      <div className="insight-bar" style={{ height: '44%' }} />
+                      <div className="insight-bar" style={{ height: '58%' }} />
+                      <div className="insight-bar" style={{ height: '66%' }} />
+                      <div className="insight-bar" style={{ height: '40%' }} />
+                      <div className="insight-bar" style={{ height: '54%' }} />
+                      <div className="insight-bar" style={{ height: '72%' }} />
+                      <div className="insight-bar" style={{ height: '46%' }} />
+                      <div className="insight-bar" style={{ height: '60%' }} />
+                    </div>
+                    <div className="insight-chart-labels">
+                      <span>Start</span>
+                      <span>End</span>
+                    </div>
+                  </article>
+                </div>
+              </section>
+            )}
 
             <div className="getting-started-card">
               <div className="getting-started-icon">N</div>
