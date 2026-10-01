@@ -167,6 +167,8 @@ function DashboardView({ onLogout }) {
   const [connectionsOpen, setConnectionsOpen] = useState(false)
   const [showConnectionForm, setShowConnectionForm] = useState(false)
   const [showDatasources, setShowDatasources] = useState(false)
+  const [analysisData, setAnalysisData] = useState(null)
+  const [analysisLoadingId, setAnalysisLoadingId] = useState(null)
   const [selectedDatasource, setSelectedDatasource] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [connectionSearch, setConnectionSearch] = useState('')
@@ -210,8 +212,8 @@ function DashboardView({ onLogout }) {
       authType: 'site24x7',
       description: 'Use the prefilled demo values for testing, or enter your Site24x7 OAuth access token.',
       endpointLabel: 'API URL',
-      endpointPlaceholder: 'https://site24x7.com',
-      endpointHint: 'Use the Site24x7 API endpoint that applies to your account region.',
+      endpointPlaceholder: 'https://www.site24x7.com/api',
+      endpointHint: 'Demo analysis reads seeded measurements from the Nexus database; no external Site24x7 request is made.',
     },
     {
       name: 'Microsoft SQL Server',
@@ -351,6 +353,31 @@ function DashboardView({ onLogout }) {
     }
   }
 
+  const analyseDatasource = async (datasource) => {
+    if (!currentUser.uniqueID || analysisLoadingId) return
+    setAnalysisLoadingId(datasource.id)
+    setConnectionStatus(null)
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/datasources/${datasource.id}/analysis?userId=${encodeURIComponent(currentUser.uniqueID)}`,
+      )
+      const data = await readApiResponse(response)
+      if (!response.ok) {
+        setConnectionStatus({ type: 'error', text: data.message || 'Unable to analyse this data source.' })
+        return
+      }
+      setAnalysisData(data)
+      setShowDatasources(false)
+      setShowConnectionForm(false)
+      setSelectedDatasource(null)
+      setConnectionStatus(null)
+    } catch {
+      setConnectionStatus({ type: 'error', text: 'Database API is not running. Unable to load analysis.' })
+    } finally {
+      setAnalysisLoadingId(null)
+    }
+  }
+
   const filteredDatasourceCards = datasourceCards.filter((datasource) => (
     datasource.name.toLowerCase().includes(connectionSearch.trim().toLowerCase())
   ))
@@ -477,6 +504,7 @@ function DashboardView({ onLogout }) {
             type="button"
             className={`menu-item ${!showConnectionForm && !showDatasources ? 'active' : ''}`}
             onClick={() => {
+              setAnalysisData(null)
               setShowConnectionForm(false)
               setShowDatasources(false)
               setConnectionsOpen(false)
@@ -503,6 +531,7 @@ function DashboardView({ onLogout }) {
                   type="button"
                   className="submenu-item"
                   onClick={() => {
+                    setAnalysisData(null)
                     setShowConnectionForm(true)
                     setShowDatasources(false)
                     setConnectionsOpen(false)
@@ -521,6 +550,7 @@ function DashboardView({ onLogout }) {
             type="button"
             className={`menu-item ${showDatasources ? 'active' : ''}`}
             onClick={() => {
+              setAnalysisData(null)
               setShowDatasources(true)
               setShowConnectionForm(false)
               setSelectedDatasource(null)
@@ -738,7 +768,7 @@ function DashboardView({ onLogout }) {
                   <label>
                     <span>OAuth access token <em>*</em></span>
                     <input name="accessToken" type="password" defaultValue={selectedDatasource.savedId ? '' : 'demo-site24x7-access-token'} placeholder="Enter your Site24x7 OAuth access token" autoComplete="off" required />
-                    <small>A demo value is prefilled for new sources. Replace it with a real OAuth token when connecting to Site24x7.</small>
+                    <small>Fake demo token, stored encrypted. Analyse data reads local database samples and does not call Site24x7.</small>
                   </label>
                 ) : selectedDatasource.authType === 'apiKey' ? (
                   <label>
@@ -839,6 +869,16 @@ function DashboardView({ onLogout }) {
                       >
                         <span aria-hidden="true">×</span> Delete
                       </button>
+                      {datasource.type?.toLowerCase() === 'site24x7' && (
+                        <button
+                          type="button"
+                          className="datasource-analyse-btn"
+                          onClick={() => analyseDatasource(datasource)}
+                          disabled={analysisLoadingId !== null}
+                        >
+                          {analysisLoadingId === datasource.id ? 'Loading…' : 'Analyse data'}
+                        </button>
+                      )}
                     </div>
                     <div className="saved-datasource-demo">
                       <span>{datasource.demoData?.status || 'Demo data imported'}</span>
@@ -857,7 +897,87 @@ function DashboardView({ onLogout }) {
           </section>
         )}
 
-        {!showConnectionForm && !showDatasources && (
+        {analysisData && !showConnectionForm && !showDatasources && (
+          <section className="monitor-shell analysis-dashboard">
+            <div className="overview-header">
+              <div>
+                <p className="overview-eyebrow">Site24x7 · Database analysis</p>
+                <h1>{analysisData.datasource.name}</h1>
+                <p>Sample monitoring measurements loaded from the Nexus database.</p>
+              </div>
+              <div className="overview-actions">
+                <button type="button" className="overview-action" onClick={() => setAnalysisData(null)}>
+                  Back to overview
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const averageFor = (metricName) => {
+                const values = analysisData.metrics.filter((metric) => metric.name === metricName)
+                if (!values.length) return '—'
+                return (values.reduce((sum, metric) => sum + metric.value, 0) / values.length).toFixed(1)
+              }
+              const warningCount = analysisData.metrics.filter((metric) => metric.status === 'Warning').length
+              return (
+                <>
+                  <div className="overview-stats analysis-stats">
+                    <article className="overview-stat">
+                      <span className="stat-label">Average CPU</span>
+                      <strong>{averageFor('CPU utilization')}%</strong>
+                      <span className="stat-caption">Across monitored hosts</span>
+                    </article>
+                    <article className="overview-stat">
+                      <span className="stat-label">Average memory</span>
+                      <strong>{averageFor('Memory usage')}%</strong>
+                      <span className="stat-caption">Across monitored hosts</span>
+                    </article>
+                    <article className="overview-stat">
+                      <span className="stat-label">Availability</span>
+                      <strong>{averageFor('Availability')}%</strong>
+                      <span className="stat-caption">Mean availability</span>
+                    </article>
+                    <article className="overview-stat">
+                      <span className="stat-label">Warnings</span>
+                      <strong className={warningCount ? 'analysis-warning' : 'status-ok'}>{warningCount}</strong>
+                      <span className="stat-caption">Metric readings to review</span>
+                    </article>
+                  </div>
+
+                  <section className="analysis-table-section">
+                    <div className="analysis-table-heading">
+                      <div>
+                        <p className="overview-eyebrow">Measurements</p>
+                        <h2>Host telemetry</h2>
+                      </div>
+                      <span>{analysisData.metrics.length} readings · {new Set(analysisData.metrics.map((metric) => metric.host)).size} hosts</span>
+                    </div>
+                    <div className="analysis-table-wrap">
+                      <table className="analysis-table">
+                        <thead>
+                          <tr><th>Host</th><th>Metric</th><th>Value</th><th>Status</th><th>Recorded</th></tr>
+                        </thead>
+                        <tbody>
+                          {analysisData.metrics.map((metric) => (
+                            <tr key={`${metric.host}-${metric.name}`}>
+                              <td>{metric.host}</td>
+                              <td>{metric.name}</td>
+                              <td>{metric.value}{metric.unit === '%' ? '%' : ` ${metric.unit}`}</td>
+                              <td><span className={`analysis-status ${metric.status.toLowerCase()}`}>{metric.status}</span></td>
+                              <td>{metric.recordedAt}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </>
+              )
+            })()}
+          </section>
+        )}
+
+        {!analysisData && !showConnectionForm && !showDatasources && (
           <section className="monitor-shell empty-state">
             <div className="overview-header">
               <div>

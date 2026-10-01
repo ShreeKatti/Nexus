@@ -80,39 +80,126 @@ def ensure_database_tables():
         )
         connection.commit()
         
-        # Forcefully drop and recreate NexusDataSources
-        cursor.execute("EXEC sp_executesql N'DROP TABLE IF EXISTS dbo.NexusDataSources'")
-        connection.commit()
-        
-        # Create fresh NexusDataSources table with all columns
+        # Create the data-source table only once; never erase saved user data on startup.
         cursor.execute(
             """
-            CREATE TABLE dbo.NexusDataSources (
-                UniqueID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-                ownerUniqueID UNIQUEIDENTIFIER NOT NULL,
-                displayName NVARCHAR(150) NOT NULL,
-                provider NVARCHAR(100) NOT NULL,
-                endpoint NVARCHAR(500) NOT NULL,
-                logoUrl NVARCHAR(500) NULL,
-                settingsJson NVARCHAR(MAX) NULL,
-                secretsEncrypted NVARCHAR(MAX) NULL,
-                CATO_API_URL NVARCHAR(500) NULL,
-                CATO_API_KEY NVARCHAR(500) NULL,
-                CATO_ACCOUNT_ID NVARCHAR(100) NULL,
-                CATO_SITE_IDS NVARCHAR(MAX) NULL,
-                SITE24X7_ENDPOINT NVARCHAR(500) NULL,
-                SITE24X7_ACCESS_TOKEN NVARCHAR(500) NULL,
-                SOLARWINDS_ENDPOINT NVARCHAR(500) NULL,
-                SOLARWINDS_USERNAME NVARCHAR(255) NULL,
-                SOLARWINDS_PASSWORD NVARCHAR(500) NULL,
-                createdAt DATETIME2 NOT NULL,
-                updatedAt DATETIME2 NOT NULL,
-                CONSTRAINT FK_NexusDataSources_NexusUsers
-                    FOREIGN KEY (ownerUniqueID) REFERENCES dbo.NexusUsers(uniqueID)
-            )
+            IF OBJECT_ID('dbo.NexusDataSources', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.NexusDataSources (
+                    UniqueID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+                    ownerUniqueID UNIQUEIDENTIFIER NOT NULL,
+                    displayName NVARCHAR(150) NOT NULL,
+                    provider NVARCHAR(100) NOT NULL,
+                    endpoint NVARCHAR(500) NOT NULL,
+                    logoUrl NVARCHAR(500) NULL,
+                    settingsJson NVARCHAR(MAX) NULL,
+                    secretsEncrypted NVARCHAR(MAX) NULL,
+                    CATO_API_URL NVARCHAR(500) NULL,
+                    CATO_API_KEY NVARCHAR(500) NULL,
+                    CATO_ACCOUNT_ID NVARCHAR(100) NULL,
+                    CATO_SITE_IDS NVARCHAR(MAX) NULL,
+                    SITE24X7_ENDPOINT NVARCHAR(500) NULL,
+                    SITE24X7_ACCESS_TOKEN NVARCHAR(500) NULL,
+                    SOLARWINDS_ENDPOINT NVARCHAR(500) NULL,
+                    SOLARWINDS_USERNAME NVARCHAR(255) NULL,
+                    SOLARWINDS_PASSWORD NVARCHAR(500) NULL,
+                    createdAt DATETIME2 NOT NULL,
+                    updatedAt DATETIME2 NOT NULL,
+                    CONSTRAINT FK_NexusDataSources_NexusUsers
+                        FOREIGN KEY (ownerUniqueID) REFERENCES dbo.NexusUsers(uniqueID)
+                )
+            END
+            """
+        )
+
+        # Add columns introduced by newer versions without replacing existing rows.
+        cursor.execute(
+            """
+            IF COL_LENGTH('dbo.NexusDataSources', 'UniqueID') IS NULL
+               AND COL_LENGTH('dbo.NexusDataSources', 'datasourceID') IS NOT NULL
+                EXEC sp_rename 'dbo.NexusDataSources.datasourceID', 'UniqueID', 'COLUMN'
+
+            IF COL_LENGTH('dbo.NexusDataSources', 'logoUrl') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD logoUrl NVARCHAR(500) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'settingsJson') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD settingsJson NVARCHAR(MAX) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'secretsEncrypted') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD secretsEncrypted NVARCHAR(MAX) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'CATO_API_URL') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD CATO_API_URL NVARCHAR(500) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'CATO_API_KEY') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD CATO_API_KEY NVARCHAR(500) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'CATO_ACCOUNT_ID') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD CATO_ACCOUNT_ID NVARCHAR(100) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'CATO_SITE_IDS') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD CATO_SITE_IDS NVARCHAR(MAX) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'SITE24X7_ENDPOINT') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD SITE24X7_ENDPOINT NVARCHAR(500) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'SITE24X7_ACCESS_TOKEN') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD SITE24X7_ACCESS_TOKEN NVARCHAR(500) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'SOLARWINDS_ENDPOINT') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD SOLARWINDS_ENDPOINT NVARCHAR(500) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'SOLARWINDS_USERNAME') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD SOLARWINDS_USERNAME NVARCHAR(255) NULL
+            IF COL_LENGTH('dbo.NexusDataSources', 'SOLARWINDS_PASSWORD') IS NULL
+                ALTER TABLE dbo.NexusDataSources ADD SOLARWINDS_PASSWORD NVARCHAR(500) NULL
+            """
+        )
+        cursor.execute(
+            """
+            IF OBJECT_ID('dbo.NexusSite24x7Metrics', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.NexusSite24x7Metrics (
+                    metricID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+                    datasourceID UNIQUEIDENTIFIER NOT NULL,
+                    hostName NVARCHAR(150) NOT NULL,
+                    metricName NVARCHAR(100) NOT NULL,
+                    metricValue FLOAT NOT NULL,
+                    unit NVARCHAR(30) NOT NULL,
+                    status NVARCHAR(30) NOT NULL,
+                    recordedAt DATETIME2 NOT NULL,
+                    CONSTRAINT FK_NexusSite24x7Metrics_NexusDataSources
+                        FOREIGN KEY (datasourceID) REFERENCES dbo.NexusDataSources(UniqueID) ON DELETE CASCADE
+                )
+            END
             """
         )
         connection.commit()
+
+
+def seed_site24x7_metrics(cursor, datasource_id, recorded_at):
+    cursor.execute(
+        "SELECT COUNT(*) FROM dbo.NexusSite24x7Metrics WHERE datasourceID = ?",
+        datasource_id,
+    )
+    if cursor.fetchone()[0]:
+        return
+
+    sample_metrics = [
+        ("app-web-01", "CPU utilization", 42.0, "%", "Healthy"),
+        ("app-web-01", "Memory usage", 68.4, "%", "Healthy"),
+        ("app-web-01", "Availability", 99.98, "%", "Healthy"),
+        ("app-web-01", "Response time", 184.0, "ms", "Healthy"),
+        ("app-web-02", "CPU utilization", 57.0, "%", "Warning"),
+        ("app-web-02", "Memory usage", 72.1, "%", "Healthy"),
+        ("app-web-02", "Availability", 99.95, "%", "Healthy"),
+        ("app-web-02", "Response time", 236.0, "ms", "Warning"),
+        ("db-prod-01", "CPU utilization", 64.0, "%", "Warning"),
+        ("db-prod-01", "Memory usage", 81.3, "%", "Warning"),
+        ("db-prod-01", "Availability", 99.99, "%", "Healthy"),
+        ("db-prod-01", "Response time", 92.0, "ms", "Healthy"),
+    ]
+    cursor.executemany(
+        """
+        INSERT INTO dbo.NexusSite24x7Metrics
+            (metricID, datasourceID, hostName, metricName, metricValue, unit, status, recordedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (str(uuid.uuid4()), datasource_id, host, metric, value, unit, status, recorded_at)
+            for host, metric, value, unit, status in sample_metrics
+        ],
+    )
 
 
 def get_secret_cipher():
@@ -375,6 +462,7 @@ def create_datasource():
                 endpoint, encrypt_secret_value(api_key_or_token),
                 now, now,
             )
+            seed_site24x7_metrics(cursor, datasource_id, now)
             settings = {}
         
         elif provider == "Solarwinds":
@@ -481,6 +569,55 @@ def update_datasource(datasource_id):
         "configuredAt": now.isoformat(sep=" ", timespec="seconds"),
         "demoData": {"hosts": 3, "metrics": 12, "status": "Demo data imported"},
     }})
+
+
+@app.get("/api/datasources/<datasource_id>/analysis")
+def analyse_datasource(datasource_id):
+    user_id = parse_user_id(request.args.get("userId"))
+    datasource_id = str(uuid.UUID(datasource_id))
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            SELECT displayName, provider
+            FROM dbo.NexusDataSources
+            WHERE UniqueID = ? AND ownerUniqueID = ?
+            """,
+            datasource_id,
+            user_id,
+        )
+        datasource = cursor.fetchone()
+        if not datasource:
+            return jsonify({"message": "Data source was not found."}), 404
+        if datasource[1] != "Site24x7":
+            return jsonify({"message": "Analysis is currently available for Site24x7 data sources."}), 400
+
+        seed_site24x7_metrics(cursor, datasource_id, now)
+        cursor.execute(
+            """
+            SELECT hostName, metricName, metricValue, unit, status, recordedAt
+            FROM dbo.NexusSite24x7Metrics
+            WHERE datasourceID = ?
+            ORDER BY hostName, metricName
+            """,
+            datasource_id,
+        )
+        metrics = [
+            {
+                "host": row[0],
+                "name": row[1],
+                "value": row[2],
+                "unit": row[3],
+                "status": row[4],
+                "recordedAt": row[5].isoformat(sep=" ", timespec="seconds"),
+            }
+            for row in cursor.fetchall()
+        ]
+        connection.commit()
+
+    return jsonify({"datasource": {"id": datasource_id, "name": datasource[0]}, "metrics": metrics})
 
 
 @app.delete("/api/datasources/<datasource_id>")
