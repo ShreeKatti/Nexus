@@ -1285,6 +1285,7 @@ input[type='password']:focus {
 }
 
 .monitor-shell.empty-state {
+  position: relative;
   min-height: calc(100vh - 166px);
   margin-top: 0;
   padding: clamp(28px, 4vw, 58px);
@@ -1324,6 +1325,34 @@ input[type='password']:focus {
   margin: 10px 0 0;
   color: #a9a4b5;
   line-height: 1.6;
+}
+
+.overview-header > div:first-child,
+.overview-actions,
+.overview-stats {
+  position: relative;
+  z-index: 1;
+}
+
+.overview-header > div:first-child { animation: dashboard-fade-up 0.55s ease both; }
+.overview-stats .overview-stat { animation: dashboard-fade-up 0.5s ease both; }
+.overview-stats .overview-stat:nth-child(1) { animation-delay: 0.12s; }
+.overview-stats .overview-stat:nth-child(2) { animation-delay: 0.22s; }
+.overview-stats .overview-stat:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes dashboard-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 760px) {
+  .overview-header { flex-wrap: wrap; }
+  .overview-actions { margin-left: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-header > div:first-child,
+  .overview-stats .overview-stat { animation: none; }
 }
 
 .overview-action,
@@ -1941,9 +1970,91 @@ button:not(:disabled):active,
 .saved-datasource-details span { display: block; margin-top: 3px; color: #b6aef0; font-size: 0.77rem; }
 .saved-datasource-details small { display: block; margin-top: 5px; color: #8f899d; font-size: 0.76rem; }
 
-.saved-datasource-status { text-align: right; }
+.saved-datasource-status {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  text-align: right;
+}
+
+.saved-datasource-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
 .saved-datasource-status span { display: block; color: #86e4b1; font-size: 0.76rem; font-weight: 750; }
-.saved-datasource-status small { display: block; margin-top: 4px; color: #777180; font-size: 0.7rem; }
+.saved-datasource-status small { display: block; color: #777180; font-size: 0.7rem; }
+
+.datasource-edit-btn,
+.datasource-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.datasource-edit-btn {
+  border-color: rgba(171, 106, 255, 0.58);
+  background: rgba(131, 45, 220, 0.15);
+  color: #d7aeff;
+}
+
+.datasource-edit-btn span {
+  color: inherit;
+  font-size: 1rem;
+  line-height: 0.8;
+}
+
+.datasource-delete-btn {
+  border-color: rgba(255, 101, 144, 0.5);
+  background: rgba(190, 37, 85, 0.12);
+  color: #ff9ab8;
+}
+
+.datasource-delete-btn span {
+  color: inherit;
+  font-size: 1.05rem;
+  line-height: 0.75;
+}
+
+.datasource-edit-btn:hover,
+.datasource-delete-btn:hover {
+  transform: translateY(-1px);
+}
+
+.datasource-edit-btn:hover {
+  border-color: #bd79ff;
+  background: rgba(151, 56, 242, 0.28);
+  color: #f0e2ff;
+}
+
+.datasource-delete-btn:hover {
+  border-color: #ff789f;
+  background: rgba(207, 44, 96, 0.26);
+  color: #ffe2eb;
+}
+
+.datasource-edit-btn:focus-visible,
+.datasource-delete-btn:focus-visible {
+  outline: 2px solid #b467ff;
+  outline-offset: 2px;
+}
+
+.datasource-edit-btn:active,
+.datasource-delete-btn:active { transform: translateY(0); }
 
 .saved-datasource-demo {
   grid-column: 2 / 4;
@@ -1995,7 +2106,8 @@ button:not(:disabled):active,
   .datasource-list-header { display: grid; }
   .datasource-list-header h2 { font-size: 1.45rem; }
   .saved-datasource-card { grid-template-columns: auto 1fr; }
-  .saved-datasource-status { grid-column: 2; text-align: left; }
+  .saved-datasource-status { grid-column: 2; justify-items: start; text-align: left; }
+  .saved-datasource-status-row { justify-content: flex-start; }
   .saved-datasource-demo { grid-column: 2; flex-wrap: wrap; }
 }
 
@@ -2361,4 +2473,27 @@ button:not(:disabled):active,
   .date-range-popup {
     max-width: none;
   }
+}
+
+.overview-header {
+  font-family: "Trebuchet MS", "Aptos Display", "Segoe UI Variable Display", "Segoe UI", sans-serif;
+}
+
+.overview-eyebrow {
+  font-family: "Segoe UI", "Inter", sans-serif;
+  letter-spacing: 0.18em;
+}
+
+.overview-header h1 {
+  font-family: "Trebuchet MS", "Aptos Display", "Segoe UI Variable Display", "Segoe UI", sans-serif;
+  font-size: clamp(1.85rem, 2.45vw, 2.7rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
+}
+
+.overview-header p:not(.overview-eyebrow) {
+  font-family: "Segoe UI", "Inter", sans-serif;
+  font-size: 0.98rem;
+  letter-spacing: 0.01em;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import solarWindsLogo from './assets/integrations/solarwinds.png'
 import catoLogo from './assets/integrations/cato.png'
@@ -10,9 +10,53 @@ import prometheusLogo from './assets/integrations/prometheus.svg'
 import grafanaLogo from './assets/integrations/grafana.svg'
 import cloudWatchLogo from './assets/integrations/cloudwatch.svg'
 
-const DEMO_CREDENTIALS = {
-  username: 'nexusadmin',
-  password: 'nexus123',
+const API_BASE_URL = ''
+const DATASOURCE_CACHE_KEY = 'nexus-datasources'
+
+const cacheNonCatoDatasources = (datasources) => {
+  localStorage.setItem(
+    DATASOURCE_CACHE_KEY,
+    JSON.stringify(datasources),
+  )
+}
+
+const readApiResponse = async (response) => {
+  const contentType = response.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    return response.json()
+  }
+  const message = await response.text()
+  return {
+    message: contentType.includes('text/html')
+      ? 'The backend endpoint was not found. Restart the Python backend and try again.'
+      : message,
+  }
+}
+
+const getStoredSession = () => {
+  try {
+    const user = JSON.parse(sessionStorage.getItem('nexus-demo-user') || 'null')
+    return user?.username ? user : null
+  } catch {
+    sessionStorage.removeItem('nexus-demo-user')
+    return null
+  }
+}
+
+const getProviderLogo = (providerName) => {
+  const logoMap = {
+    'Cato': catoLogo,
+    'Site24x7': site24x7Logo,
+    'SolarWinds SWIS API': solarWindsLogo,
+    'Solarwinds': solarWindsLogo,
+    'Microsoft SQL Server': microsoftSqlServerLogo,
+    'MySQL': mysqlLogo,
+    'PostgreSQL': postgresqlLogo,
+    'Prometheus': prometheusLogo,
+    'Grafana': grafanaLogo,
+    'AWS CloudWatch': cloudWatchLogo,
+  }
+  return logoMap[providerName] || logoMap[providerName?.split(' ')[0]]
 }
 
 function NexusLogo() {
@@ -137,7 +181,7 @@ function DashboardView({ onLogout }) {
     }
   })
 
-  const currentUser = JSON.parse(localStorage.getItem('nexus-demo-user') || '{}')
+  const currentUser = getStoredSession() || {}
   const username = currentUser.username || 'Nexus'
   const userInitial = username.charAt(0).toUpperCase()
 
@@ -154,19 +198,19 @@ function DashboardView({ onLogout }) {
     {
       name: 'Cato',
       logoUrl: catoLogo,
-      authType: 'basic',
-      description: 'Connect to your Cato SASE account with an API key.',
+      authType: 'cato',
+      description: 'Connect to your Cato SASE account with your API URL, API key, account ID, and site IDs.',
       endpointLabel: 'API URL',
-      endpointPlaceholder: 'https://api.catonetworks.com/api/v1',
+      endpointPlaceholder: 'https://api.catonetworks.com/api/v1/graphql2',
       endpointHint: 'Use the Cato API endpoint for your account and a read-only API key where possible.',
     },
     {
       name: 'Site24x7',
       logoUrl: site24x7Logo,
-      authType: 'basic',
-      description: 'Import monitoring data from Site24x7 using an API key.',
+      authType: 'site24x7',
+      description: 'Use the prefilled demo values for testing, or enter your Site24x7 OAuth access token.',
       endpointLabel: 'API URL',
-      endpointPlaceholder: 'https://www.site24x7.com/api',
+      endpointPlaceholder: 'https://site24x7.com',
       endpointHint: 'Use the Site24x7 API endpoint that applies to your account region.',
     },
     {
@@ -230,6 +274,83 @@ function DashboardView({ onLogout }) {
     setConnectionStatus(null)
   }
 
+  useEffect(() => {
+    if (!currentUser.uniqueID) return
+
+    let isCurrent = true
+    const loadSavedDatasources = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/datasources?userId=${encodeURIComponent(currentUser.uniqueID)}`)
+        const data = await readApiResponse(response)
+        if (!response.ok || !isCurrent) return
+        setSavedDatasources(data.datasources || [])
+        cacheNonCatoDatasources(data.datasources || [])
+      } catch {
+        // Keep the local copy visible if the backend is temporarily unavailable.
+      }
+    }
+
+    loadSavedDatasources()
+    return () => { isCurrent = false }
+  }, [currentUser.uniqueID])
+
+  useEffect(() => {
+    if (!connectionStatus) return
+    const timer = setTimeout(() => {
+      setConnectionStatus(null)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [connectionStatus])
+
+  const editSavedDatasource = (datasource) => {
+    const sourceTemplate = datasourceCards.find((card) => card.name === datasource.type) || datasourceCards.find((card) => card.name === datasource.name)
+    setSelectedDatasource({
+      ...(sourceTemplate || datasource),
+      savedId: datasource.id,
+      savedFromDatabase: datasource.databaseId === true,
+      savedName: datasource.name,
+      savedEndpoint: datasource.endpoint,
+      savedSettings: datasource.settings || {},
+      savedConfiguredAt: datasource.configuredAt,
+    })
+    setConnectionStatus(null)
+    setShowDatasources(false)
+    setShowConnectionForm(true)
+  }
+
+  const deleteSavedDatasource = async (datasource) => {
+    const { id: datasourceId, databaseId } = datasource
+    if (!currentUser.uniqueID) return
+
+    if (!databaseId) {
+      setSavedDatasources((sources) => {
+        const nextSources = sources.filter((source) => source.id !== datasourceId)
+        cacheNonCatoDatasources(nextSources)
+        return nextSources
+      })
+      setConnectionStatus({ type: 'success', text: 'Data source deleted.' })
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/datasources/${datasourceId}?userId=${encodeURIComponent(currentUser.uniqueID)}`, {
+        method: 'DELETE',
+      })
+      const data = await readApiResponse(response)
+      if (!response.ok) {
+        setConnectionStatus({ type: 'error', text: data.message || 'Unable to delete this data source.' })
+        return
+      }
+      setSavedDatasources((sources) => {
+        const nextSources = sources.filter((source) => source.id !== datasourceId)
+        cacheNonCatoDatasources(nextSources)
+        return nextSources
+      })
+    } catch {
+      setConnectionStatus({ type: 'error', text: 'Database API is not running. The data source was not deleted.' })
+    }
+  }
+
   const filteredDatasourceCards = datasourceCards.filter((datasource) => (
     datasource.name.toLowerCase().includes(connectionSearch.trim().toLowerCase())
   ))
@@ -239,27 +360,34 @@ function DashboardView({ onLogout }) {
     setConnectionStatus(null)
   }
 
-  const saveAndTestConnection = (event) => {
+  const saveAndTestConnection = async (event) => {
     event.preventDefault()
     const values = new FormData(event.currentTarget)
-    const requiredFields = ['username', 'password']
+    const requiredFields = selectedDatasource.authType === 'cato'
+      ? ['endpoint', 'apiKey', 'accountId', 'siteIds']
+      : selectedDatasource.authType === 'site24x7'
+        ? ['accessToken']
+        : ['username', 'password']
 
     if (requiredFields.some((field) => !values.get(field)?.trim())) {
       setConnectionStatus({ type: 'error', text: 'Complete all required connection details before testing.' })
       return
     }
 
-    setConnectionStatus({
-      type: 'success',
-      text: 'Configuration saved.',
-    })
-
     const datasource = {
-      id: `${selectedDatasource.name}-${Date.now()}`,
+      id: selectedDatasource.savedId || `${selectedDatasource.name}-${Date.now()}`,
       name: values.get('name').trim(),
       type: selectedDatasource.name,
       endpoint: values.get('endpoint').trim(),
       logoUrl: selectedDatasource.logoUrl,
+      settings: {
+        isDefault: values.get('isDefault') === 'on',
+        port: values.get('port') || '',
+        database: values.get('database') || '',
+        accountId: values.get('accountId') || '',
+        siteIds: values.get('siteIds') || '',
+        skipTlsValidation: values.get('skipTlsValidation') === 'on',
+      },
       configuredAt: new Date().toLocaleString(),
       demoData: {
         hosts: 3,
@@ -268,11 +396,67 @@ function DashboardView({ onLogout }) {
       },
     }
 
-    setSavedDatasources((sources) => {
-      const nextSources = [...sources.filter((source) => source.name !== datasource.name), datasource]
-      localStorage.setItem('nexus-datasources', JSON.stringify(nextSources))
-      return nextSources
-    })
+    const cato = selectedDatasource.authType === 'cato'
+      ? {
+          CATO_API_URL: datasource.endpoint,
+          CATO_API_KEY: values.get('apiKey')?.trim() || '',
+          CATO_ACCOUNT_ID: values.get('accountId')?.trim() || '',
+          CATO_SITE_IDS: values.get('siteIds')?.trim() || '',
+        }
+      : null
+
+    const payload = {
+      userId: currentUser.uniqueID,
+      name: datasource.name,
+      provider: datasource.type,
+      endpoint: datasource.endpoint,
+      logoUrl: datasource.logoUrl,
+      settings: datasource.settings,
+      secrets: {
+        username: values.get('username') || '',
+        password: values.get('password') || '',
+        apiKey: cato ? '' : values.get('apiKey') || '',
+        accessToken: values.get('accessToken') || '',
+      },
+      ...(cato ? { cato } : {}),
+    }
+
+    try {
+      const isDatabaseEdit = Boolean(selectedDatasource.savedId && selectedDatasource.savedFromDatabase)
+      const response = await fetch(
+        isDatabaseEdit
+          ? `${API_BASE_URL}/api/datasources/${selectedDatasource.savedId}`
+          : `${API_BASE_URL}/api/datasources`,
+        {
+          method: isDatabaseEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      )
+      const data = await readApiResponse(response)
+      if (!response.ok) {
+        setConnectionStatus({ type: 'error', text: data.message || 'Unable to save this data source.' })
+        return
+      }
+
+      const savedDatasource = data.datasource
+      setSavedDatasources((sources) => {
+        const nextSources = selectedDatasource.savedId
+          ? sources.map((source) => (source.id === selectedDatasource.savedId ? savedDatasource : source))
+          : [...sources, savedDatasource]
+        cacheNonCatoDatasources(nextSources)
+        return nextSources
+      })
+      setConnectionStatus({
+        type: 'success',
+        text: savedDatasource.type === 'Cato'
+          ? 'Cato connection saved to dbo.NexusDataSources.'
+          : 'Configuration saved.',
+      })
+    } catch {
+      setConnectionStatus({ type: 'error', text: 'Database API is not running. The data source was not saved.' })
+      return
+    }
     setSelectedDatasource(null)
     setShowConnectionForm(false)
     setShowDatasources(true)
@@ -361,7 +545,7 @@ function DashboardView({ onLogout }) {
             >
               ☰
             </button>
-            <div className="breadcrumbs">Dashboard</div>
+            <div className="breadcrumbs">Hello, {username}</div>
           </div>
           <div className="toolbar-controls">
             <input className="search-box" type="text" placeholder="Search..." />
@@ -496,7 +680,7 @@ function DashboardView({ onLogout }) {
                 <h3>Settings</h3>
                 <label>
                   <span>Name <em>*</em></span>
-                  <input name="name" type="text" defaultValue={selectedDatasource.name} required />
+                  <input name="name" type="text" defaultValue={selectedDatasource.savedName || selectedDatasource.name} required />
                   <small>A unique name for this data source in Nexus.</small>
                 </label>
                 <label className="config-switch-row">
@@ -512,7 +696,7 @@ function DashboardView({ onLogout }) {
                 <h3>Connection</h3>
                 <label>
                   <span>{selectedDatasource.endpointLabel}</span>
-                  <input name="endpoint" type="text" defaultValue={selectedDatasource.endpointPlaceholder} />
+                  <input name="endpoint" type="text" defaultValue={selectedDatasource.savedEndpoint || selectedDatasource.endpointPlaceholder} />
                   <small>{selectedDatasource.endpointHint}</small>
                 </label>
 
@@ -532,7 +716,31 @@ function DashboardView({ onLogout }) {
 
               <div className="config-section">
                 <h3>Authentication</h3>
-                {selectedDatasource.authType === 'apiKey' ? (
+                {selectedDatasource.authType === 'cato' ? (
+                  <>
+                    <label>
+                      <span>Cato API key <em>*</em></span>
+                      <input name="apiKey" type="password" placeholder="Enter your Cato API key" autoComplete="off" required />
+                      <small>Your API key is encrypted before database storage and is never returned to the browser.</small>
+                    </label>
+                    <div className="config-field-grid">
+                      <label>
+                        <span>Cato account ID <em>*</em></span>
+                        <input name="accountId" type="text" placeholder="3741" defaultValue={selectedDatasource.savedSettings?.accountId || ''} required />
+                      </label>
+                      <label>
+                        <span>Cato site ID(s) <em>*</em></span>
+                        <input name="siteIds" type="text" placeholder="81551 or 81551, 81552" defaultValue={selectedDatasource.savedSettings?.siteIds || ''} required />
+                      </label>
+                    </div>
+                  </>
+                ) : selectedDatasource.authType === 'site24x7' ? (
+                  <label>
+                    <span>OAuth access token <em>*</em></span>
+                    <input name="accessToken" type="password" defaultValue={selectedDatasource.savedId ? '' : 'demo-site24x7-access-token'} placeholder="Enter your Site24x7 OAuth access token" autoComplete="off" required />
+                    <small>A demo value is prefilled for new sources. Replace it with a real OAuth token when connecting to Site24x7.</small>
+                  </label>
+                ) : selectedDatasource.authType === 'apiKey' ? (
                   <label>
                     <span>API key <em>*</em></span>
                     <input name="apiKey" type="password" placeholder="Enter API key" required />
@@ -590,12 +798,18 @@ function DashboardView({ onLogout }) {
               </button>
             </div>
 
+            {connectionStatus && (
+              <div className={`connection-status ${connectionStatus.type}`} role="status">
+                {connectionStatus.text}
+              </div>
+            )}
+
             {savedDatasources.length ? (
               <div className="saved-datasource-grid">
                 {savedDatasources.map((datasource) => (
                   <article key={datasource.id} className="saved-datasource-card">
                     <div className="saved-datasource-logo">
-                      <img src={datasource.logoUrl} alt={`${datasource.type} logo`} />
+                      <img src={getProviderLogo(datasource.type)} alt={`${datasource.type} logo`} />
                     </div>
                     <div className="saved-datasource-details">
                       <h3>{datasource.name}</h3>
@@ -603,8 +817,28 @@ function DashboardView({ onLogout }) {
                       <small>{datasource.endpoint}</small>
                     </div>
                     <div className="saved-datasource-status">
-                      <span>Configured</span>
+                      <div className="saved-datasource-status-row">
+                        <span>Configured</span>
+                        <button
+                          type="button"
+                          className="datasource-edit-btn"
+                          onClick={() => editSavedDatasource(datasource)}
+                          aria-label={`Edit ${datasource.name}`}
+                          title="Edit data source"
+                        >
+                          <span aria-hidden="true">✎</span> Edit
+                        </button>
+                      </div>
                       <small>{datasource.configuredAt}</small>
+                      <button
+                        type="button"
+                        className="datasource-delete-btn"
+                        onClick={() => deleteSavedDatasource(datasource)}
+                        aria-label={`Delete ${datasource.name}`}
+                        title="Delete data source"
+                      >
+                        <span aria-hidden="true">×</span> Delete
+                      </button>
                     </div>
                     <div className="saved-datasource-demo">
                       <span>{datasource.demoData?.status || 'Demo data imported'}</span>
@@ -628,13 +862,10 @@ function DashboardView({ onLogout }) {
             <div className="overview-header">
               <div>
                 <p className="overview-eyebrow">Observability workspace</p>
-                <h1>Hello, {username}</h1>
+                <h1>Your systems, clearly in view.</h1>
                 <p>Connect a data source to start bringing your infrastructure into focus.</p>
               </div>
               <div className="overview-actions">
-                <button type="button" className="overview-action" onClick={() => setShowConnectionForm(true)}>
-                  <span>+</span> Add connection
-                </button>
                 <button
                   type="button"
                   className="overview-action date-range-btn"
@@ -848,7 +1079,9 @@ function DashboardView({ onLogout }) {
 }
 
 function App() {
-  const [view, setView] = useState('landing')
+  const [view, setView] = useState(() => {
+    return getStoredSession() ? 'dashboard' : 'landing'
+  })
   const [mode, setMode] = useState('signin')
   const [showAuth, setShowAuth] = useState(false)
   const [message, setMessage] = useState('')
@@ -873,7 +1106,7 @@ function App() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('nexus-demo-user')
+    sessionStorage.removeItem('nexus-demo-user')
     setView('landing')
     setShowAuth(false)
     setMessage('')
@@ -881,7 +1114,7 @@ function App() {
     setShowSignupSuccess(false)
   }
 
-  const handleAuthSubmit = (event) => {
+  const handleAuthSubmit = async (event) => {
     event.preventDefault()
     const form = event.currentTarget
     const username = form.elements.username.value.trim()
@@ -894,46 +1127,58 @@ function App() {
     }
 
     if (mode === 'signup') {
-      const existingUsers = JSON.parse(localStorage.getItem('nexus-demo-users') || '[]')
-      const userExists = existingUsers.some((entry) => entry.username === username)
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        })
+        const data = await readApiResponse(response)
 
-      if (userExists) {
-        setMessage('Username already exists. Please sign in or choose another username.')
+        if (!response.ok) {
+          setMessage(data.message || 'Unable to create account right now.')
+          setMessageType('error')
+          return
+        }
+
+        setMode('signin')
+        setCreatedUsername(data.username || username)
+        setShowSignupSuccess(true)
+        form.reset()
+      } catch {
+        setMessage('Database API is not running. Please start the Python backend and try again.')
+        setMessageType('error')
+      }
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await readApiResponse(response)
+
+      if (!response.ok) {
+        setMessage(data.message || 'Unable to sign in right now.')
         setMessageType('error')
         return
       }
 
-      existingUsers.push({ username, password })
-      localStorage.setItem('nexus-demo-users', JSON.stringify(existingUsers))
-      localStorage.setItem('nexus-demo-user', JSON.stringify({ username, password }))
-
-      setMode('signin')
-      setCreatedUsername(username)
-      setShowSignupSuccess(true)
-      form.reset()
-      return
-    }
-
-    const persistedUsers = JSON.parse(localStorage.getItem('nexus-demo-users') || '[]')
-    const demoUsernameMatches = username === DEMO_CREDENTIALS.username
-    const storedUser = persistedUsers.find((entry) => entry.username === username)
-    const isDemoUser = demoUsernameMatches && password === DEMO_CREDENTIALS.password
-    const isPersistedUser = storedUser?.password === password
-
-    if (!isDemoUser && !isPersistedUser) {
-      setMessage(
-        demoUsernameMatches || storedUser
-          ? 'Incorrect password. Please try again.'
-          : 'No account was found with this username. Please create an account first.',
-      )
+      sessionStorage.setItem('nexus-demo-user', JSON.stringify({
+        uniqueID: data.uniqueID,
+        username: data.username,
+      }))
+      setMessage('')
+      setMessageType('error')
+      setShowAuth(false)
+      setView('dashboard')
+    } catch {
+      setMessage('Database API is not running. Please start the Python backend and try again.')
       setMessageType('error')
       return
     }
-
-    localStorage.setItem('nexus-demo-user', JSON.stringify({ username, password }))
-    setMessage('')
-    setMessageType('error')
-    setView('dashboard')
   }
 
   const signInWithNewAccount = () => {
