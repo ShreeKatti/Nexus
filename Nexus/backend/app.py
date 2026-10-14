@@ -643,7 +643,7 @@ def delete_datasource(datasource_id):
     return jsonify({"message": "Data source deleted."})
 
 
-if __name__ == "__main__":
+def initialize_database():
     try:
         ensure_database_tables()
     except pyodbc.Error as error:
@@ -651,6 +651,10 @@ if __name__ == "__main__":
         # database is temporarily unavailable. Requests will receive the 503
         # response from handle_database_error until SQL Server is reachable.
         app.logger.warning("Database initialization failed; API will remain available: %s", error)
+
+
+if __name__ == "__main__":
+    initialize_database()
     # Keep the fallback aligned with Vite's development proxy.  This also means
     # the API works out of the box when no backend/.env file is present yet.
     app.run(host=os.getenv("API_HOST", "127.0.0.1"), port=int(os.getenv("API_PORT", "5001")))

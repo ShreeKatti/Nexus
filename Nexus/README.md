@@ -1,8 +1,14 @@
-# React + Vite
+# Nexus
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project layout
 
-Currently, two official plugins are available:
+- `frontend/` contains the React/Vite application and npm dependencies.
+- `backend/` contains the Flask API, database schema, and Python dependencies.
+
+Build and deploy these applications independently. Serve the frontend build
+(`frontend/dist/`) from a static host or reverse proxy. The backend includes
+Waitress as its production WSGI server; do not use Flask's development server
+for deployment.
 
 ## MSSQL auth backend
 
@@ -25,11 +31,11 @@ Configured data sources are stored in `dbo.NexusDataSources`, linked to the sign
 
 The React source is organized by responsibility:
 
-- `src/pages/` contains the landing and dashboard pages.
-- `src/components/` contains reusable presentation components.
-- `src/features/` contains authentication and datasource-specific state/storage helpers.
-- `src/data/` contains datasource provider metadata and logo mappings.
-- `src/services/` contains API communication helpers.
+- `frontend/src/pages/` contains the landing and dashboard pages.
+- `frontend/src/components/` contains reusable presentation components.
+- `frontend/src/features/` contains authentication and datasource-specific state/storage helpers.
+- `frontend/src/data/` contains datasource provider metadata and logo mappings.
+- `frontend/src/services/` contains API communication helpers.
 
 Set `VITE_API_BASE_URL` only when the API is hosted on a separate origin. Leave it
 unset when using the included Vite `/api` proxy. Do not put credentials or other
@@ -49,7 +55,9 @@ DATASOURCE_ENCRYPTION_KEY=the_generated_key
 
 Site24x7 uses an API URL and OAuth access token. Cato uses an API URL, API key, account ID, and one or more comma-separated site IDs.
 
-Setup:
+## Local development
+
+Create the backend environment and install its dependencies:
 
 ```powershell
 cd backend
@@ -61,9 +69,8 @@ python app.py
 ```
 
 The frontend development server proxies `/api` calls to
-`http://127.0.0.1:5001`. Keep the Python process running while using the
-frontend. If you choose a different `API_PORT` in `backend/.env`, update the
-matching target in `vite.config.js` and restart Vite.
+`http://127.0.0.1:5001`. If you choose a different `API_PORT` in
+`backend/.env`, update the matching target in `frontend/vite.config.js`.
 
 Put your MSSQL values in `backend/.env`:
 
@@ -74,14 +81,38 @@ MSSQL_USERNAME=your_database_username
 MSSQL_PASSWORD=your_database_password
 ```
 
-In another terminal, run the frontend:
+Install and run the frontend from its directory:
 
 ```powershell
+cd frontend
+npm ci
 npm run dev
 ```
 
-`npm run dev` starts both Flask and Vite. To run only Vite (for example, when
-the API is already running in a debugger), use `npm run dev:vite`.
+`npm run dev` starts both Flask and Vite; `npm run dev:vite` starts only Vite.
+
+## Production deployment
+
+Build the frontend from `frontend/` and deploy `frontend/dist/` to a static web
+host:
+
+```powershell
+npm ci
+npm run build
+```
+
+Deploy the backend separately. Install `backend/requirements.txt`, provide the
+database and encryption settings as environment variables, and set
+`API_HOST=0.0.0.0`, `PORT` (or `API_PORT`), and `FRONTEND_ORIGIN` to the deployed
+frontend's origin. Start Waitress from `backend/` with:
+
+```powershell
+python serve.py
+```
+
+Set `VITE_API_BASE_URL` to the deployed API origin before building the frontend
+when the API is hosted on a separate origin. Never put credentials or other
+secrets in `VITE_*` variables.
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)

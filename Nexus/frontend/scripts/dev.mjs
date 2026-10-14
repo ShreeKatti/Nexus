@@ -1,8 +1,11 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const backendDirectory = resolve('backend')
+const frontendDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const projectDirectory = resolve(frontendDirectory, '..')
+const backendDirectory = resolve(projectDirectory, 'backend')
 const pythonPath = process.platform === 'win32'
   ? resolve(backendDirectory, '.venv', 'Scripts', 'python.exe')
   : resolve(backendDirectory, '.venv', 'bin', 'python')
@@ -17,7 +20,8 @@ const api = spawn(pythonPath, ['app.py'], {
   cwd: backendDirectory,
   stdio: 'inherit',
 })
-const vite = spawn(process.execPath, [resolve('node_modules', 'vite', 'bin', 'vite.js')], {
+const vite = spawn(process.execPath, [resolve(frontendDirectory, 'node_modules', 'vite', 'bin', 'vite.js')], {
+  cwd: frontendDirectory,
   stdio: 'inherit',
 })
 
