@@ -21,6 +21,20 @@ Passwords are hashed before storing. The database connection username and passwo
 
 Configured data sources are stored in `dbo.NexusDataSources`, linked to the signed-in user. API keys, OAuth access tokens, and connector passwords are encrypted before they are written to MSSQL and are never returned to the browser.
 
+## Frontend structure
+
+The React source is organized by responsibility:
+
+- `src/pages/` contains the landing and dashboard pages.
+- `src/components/` contains reusable presentation components.
+- `src/features/` contains authentication and datasource-specific state/storage helpers.
+- `src/data/` contains datasource provider metadata and logo mappings.
+- `src/services/` contains API communication helpers.
+
+Set `VITE_API_BASE_URL` only when the API is hosted on a separate origin. Leave it
+unset when using the included Vite `/api` proxy. Do not put credentials or other
+secrets in `VITE_*` variables; Vite exposes them to the browser bundle.
+
 Add a Fernet encryption key to `backend/.env` before starting the backend. Generate one once with:
 
 ```powershell
