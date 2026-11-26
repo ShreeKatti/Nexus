@@ -81,6 +81,7 @@ BEGIN
     CREATE TABLE dbo.NexusSite24x7Metrics (
         metricID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
         datasourceID UNIQUEIDENTIFIER NOT NULL,
+        monitorID NVARCHAR(100) NULL,
         hostName NVARCHAR(150) NOT NULL,
         metricName NVARCHAR(100) NOT NULL,
         metricValue FLOAT NOT NULL,
@@ -91,3 +92,16 @@ BEGIN
             FOREIGN KEY (datasourceID) REFERENCES dbo.NexusDataSources(UniqueID) ON DELETE CASCADE
     )
 END
+
+IF COL_LENGTH('dbo.NexusSite24x7Metrics', 'monitorID') IS NULL
+    ALTER TABLE dbo.NexusSite24x7Metrics ADD monitorID NVARCHAR(100) NULL
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_NexusSite24x7Metrics_Latest'
+      AND object_id = OBJECT_ID('dbo.NexusSite24x7Metrics')
+)
+    CREATE INDEX IX_NexusSite24x7Metrics_Latest
+ON dbo.NexusSite24x7Metrics (datasourceID, monitorID, metricName, recordedAt DESC)
+INCLUDE (hostName, metricValue, unit, status)

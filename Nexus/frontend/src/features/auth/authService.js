@@ -1,4 +1,4 @@
-import { API_BASE_URL, readApiResponse } from '../../services/api.js'
+import { API_BASE_URL, readApiResponse } from '../../shared/services/api.js'
 
 const submitCredentials = async (endpoint, credentials) => {
   const response = await fetch(`${API_BASE_URL}/api/${endpoint}`, {

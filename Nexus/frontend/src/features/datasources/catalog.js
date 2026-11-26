@@ -1,16 +1,17 @@
-import solarWindsLogo from '../assets/integrations/solarwinds.png'
-import catoLogo from '../assets/integrations/cato.png'
-import site24x7Logo from '../assets/integrations/site24x7.png'
-import microsoftSqlServerLogo from '../assets/integrations/microsoft-sql-server.png'
-import mysqlLogo from '../assets/integrations/mysql.svg'
-import postgresqlLogo from '../assets/integrations/postgresql.svg'
-import prometheusLogo from '../assets/integrations/prometheus.svg'
-import grafanaLogo from '../assets/integrations/grafana.svg'
-import cloudWatchLogo from '../assets/integrations/cloudwatch.svg'
+import solarWindsLogo from '../../assets/integrations/solarwinds.png'
+import catoLogo from '../../assets/integrations/cato.png'
+import site24x7Logo from '../../assets/integrations/site24x7.png'
+import microsoftSqlServerLogo from '../../assets/integrations/microsoft-sql-server.png'
+import mysqlLogo from '../../assets/integrations/mysql.svg'
+import postgresqlLogo from '../../assets/integrations/postgresql.svg'
+import prometheusLogo from '../../assets/integrations/prometheus.svg'
+import grafanaLogo from '../../assets/integrations/grafana.svg'
+import cloudWatchLogo from '../../assets/integrations/cloudwatch.svg'
 
 export const DATASOURCE_CARDS = [
     {
       name: 'SolarWinds SWIS API',
+      slug: 'solarwinds-swis-api',
       logoUrl: solarWindsLogo,
       authType: 'basic',
       description: 'Connect to the SolarWinds Information Service (SWIS) API.',
@@ -20,6 +21,7 @@ export const DATASOURCE_CARDS = [
     },
     {
       name: 'Cato',
+      slug: 'cato',
       logoUrl: catoLogo,
       authType: 'cato',
       description: 'Connect to your Cato SASE account with your API URL, API key, account ID, and site IDs.',
@@ -29,15 +31,17 @@ export const DATASOURCE_CARDS = [
     },
     {
       name: 'Site24x7',
+      slug: 'site24x7',
       logoUrl: site24x7Logo,
       authType: 'site24x7',
-      description: 'Use the prefilled demo values for testing, or enter your Site24x7 OAuth access token.',
+      description: 'Connect your Site24x7 account and continuously collect monitor status and availability.',
       endpointLabel: 'API URL',
-      endpointPlaceholder: 'https://www.site24x7.com/api',
-      endpointHint: 'Demo analysis reads seeded measurements from the Nexus database; no external Site24x7 request is made.',
+      endpointPlaceholder: 'https://www.site24x7.in/api',
+      endpointHint: 'Use the API URL for your Site24x7 data center. The URL must end in /api.',
     },
     {
       name: 'Microsoft SQL Server',
+      slug: 'microsoft-sql-server',
       logoUrl: microsoftSqlServerLogo,
       authType: 'basic',
       description: 'Connect to a Microsoft SQL Server database.',
@@ -47,6 +51,7 @@ export const DATASOURCE_CARDS = [
     },
     {
       name: 'MySQL',
+      slug: 'mysql',
       logoUrl: mysqlLogo,
       authType: 'basic',
       description: 'Connect to a MySQL database with a dedicated read-only account.',
@@ -56,6 +61,7 @@ export const DATASOURCE_CARDS = [
     },
     {
       name: 'PostgreSQL',
+      slug: 'postgresql',
       logoUrl: postgresqlLogo,
       authType: 'basic',
       description: 'Connect to a PostgreSQL database with a dedicated read-only account.',
@@ -65,6 +71,7 @@ export const DATASOURCE_CARDS = [
     },
     {
       name: 'Prometheus',
+      slug: 'prometheus',
       logoUrl: prometheusLogo,
       authType: 'basic',
       description: 'Connect to a Prometheus server to query metrics.',
@@ -74,6 +81,7 @@ export const DATASOURCE_CARDS = [
     },
     {
       name: 'Grafana',
+      slug: 'grafana',
       logoUrl: grafanaLogo,
       authType: 'basic',
       description: 'Connect to a Grafana instance and import dashboard metadata.',
@@ -83,6 +91,7 @@ export const DATASOURCE_CARDS = [
     },
     {
       name: 'AWS CloudWatch',
+      slug: 'aws-cloudwatch',
       logoUrl: cloudWatchLogo,
       authType: 'basic',
       description: 'Connect to AWS CloudWatch to bring cloud metrics into Nexus.',
@@ -91,6 +100,14 @@ export const DATASOURCE_CARDS = [
       endpointHint: 'Use the CloudWatch endpoint for your AWS region.',
     },
 ]
+
+export const getDatasourceSlug = (providerName) => {
+  const normalizedName = providerName?.toLowerCase()
+  const datasource = DATASOURCE_CARDS.find((card) => card.name.toLowerCase() === normalizedName)
+  if (datasource) return datasource.slug
+  if (normalizedName === 'solarwinds') return 'solarwinds-swis-api'
+  return normalizedName?.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || ''
+}
 
 export const getProviderLogo = (providerName) => {
   const logoMap = {

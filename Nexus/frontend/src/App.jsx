@@ -1,32 +1,30 @@
 import { useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { signIn, signUp } from './features/auth/authService.js'
 import { clearStoredSession, getStoredSession, storeSession } from './features/auth/session.js'
 import LandingPage from './pages/LandingPage.jsx'
-import DashboardPage from './pages/DashboardPage.jsx'
+import DashboardPage from './features/dashboard/DashboardPage.jsx'
 
 function App() {
-  const [view, setView] = useState(() => {
-    return getStoredSession() ? 'dashboard' : 'landing'
-  })
-  const [mode, setMode] = useState('signin')
-  const [showAuth, setShowAuth] = useState(false)
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const mode = pathname === '/signup' ? 'signup' : 'signin'
+  const isAuthenticated = Boolean(getStoredSession())
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('error')
   const [showSignupSuccess, setShowSignupSuccess] = useState(false)
   const [createdUsername, setCreatedUsername] = useState('')
 
   const openAuth = (nextMode) => {
-    setMode(nextMode)
-    setShowAuth(true)
-    setView('landing')
+    navigate(nextMode === 'signup' ? '/signup' : '/signin')
     setMessage('')
     setMessageType('error')
     setShowSignupSuccess(false)
   }
 
   const closeAuth = () => {
-    setShowAuth(false)
+    navigate('/home')
     setMessage('')
     setMessageType('error')
     setShowSignupSuccess(false)
@@ -34,8 +32,7 @@ function App() {
 
   const handleLogout = () => {
     clearStoredSession()
-    setView('landing')
-    setShowAuth(false)
+    navigate('/home')
     setMessage('')
     setMessageType('error')
     setShowSignupSuccess(false)
@@ -63,9 +60,9 @@ function App() {
           return
         }
 
-        setMode('signin')
         setCreatedUsername(data.username || username)
         setShowSignupSuccess(true)
+        navigate('/signin')
         form.reset()
       } catch {
         setMessage('Database API is not running. Please start the Python backend and try again.')
@@ -89,8 +86,7 @@ function App() {
       })
       setMessage('')
       setMessageType('error')
-      setShowAuth(false)
-      setView('dashboard')
+      navigate('/dashboard')
     } catch {
       setMessage('Database API is not running. Please start the Python backend and try again.')
       setMessageType('error')
@@ -101,31 +97,39 @@ function App() {
   const signInWithNewAccount = () => {
     setShowSignupSuccess(false)
     setCreatedUsername('')
-    setMode('signin')
+    navigate('/signin')
     setMessage('')
     setMessageType('error')
   }
 
+  const renderLandingPage = (authVisible = false) => (
+    <LandingPage
+      mode={mode}
+      showAuth={authVisible}
+      message={message}
+      messageType={messageType}
+      showSignupSuccess={showSignupSuccess}
+      createdUsername={createdUsername}
+      onOpenAuth={openAuth}
+      onCloseAuth={closeAuth}
+      onDismissMessage={() => setMessage('')}
+      onSignInNow={signInWithNewAccount}
+      onEnterDashboard={handleAuthSubmit}
+    />
+  )
+
   return (
-    <>
-      {view === 'dashboard' ? (
-        <DashboardPage onLogout={handleLogout} />
-      ) : (
-        <LandingPage
-          mode={mode}
-          showAuth={showAuth}
-          message={message}
-          messageType={messageType}
-          showSignupSuccess={showSignupSuccess}
-          createdUsername={createdUsername}
-          onOpenAuth={openAuth}
-          onCloseAuth={closeAuth}
-          onDismissMessage={() => setMessage('')}
-          onSignInNow={signInWithNewAccount}
-          onEnterDashboard={handleAuthSubmit}
-        />
-      )}
-    </>
+    <Routes>
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="/home" element={renderLandingPage()} />
+      <Route path="/signin" element={renderLandingPage(true)} />
+      <Route path="/signup" element={renderLandingPage(true)} />
+      <Route
+        path="/dashboard/*"
+        element={isAuthenticated ? <DashboardPage onLogout={handleLogout} /> : <Navigate to="/signin" replace />}
+      />
+      <Route path="*" element={<Navigate to="/home" replace />} />
+    </Routes>
   )
 }
 

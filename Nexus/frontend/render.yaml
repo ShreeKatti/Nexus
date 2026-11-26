@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: nexus-api
+    runtime: docker
+    dockerfilePath: ./Nexus/backend/Dockerfile
+    dockerContext: ./Nexus/backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: FRONTEND_ORIGIN
+        value: https://nexus-nexus-aa77.vercel.app
+      - key: MSSQL_DRIVER
+        value: ODBC Driver 18 for SQL Server
+      - key: MSSQL_SERVER
+        sync: false
+      - key: MSSQL_DATABASE
+        sync: false
+      - key: MSSQL_USERNAME
+        sync: false
+      - key: MSSQL_PASSWORD
+        sync: false
+      - key: MSSQL_ENCRYPT
+        value: "yes"
+      - key: MSSQL_TRUST_SERVER_CERTIFICATE
+        value: "no"
+      - key: MSSQL_APPLICATION_NAME
+        value: Nexus
+      - key: MSSQL_CONNECTION_TIMEOUT
+        value: "15"
+      - key: DATASOURCE_ENCRYPTION_KEY
+        sync: false

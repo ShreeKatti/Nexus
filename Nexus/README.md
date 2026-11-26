@@ -3,7 +3,9 @@
 ## Project layout
 
 - `frontend/` contains the React/Vite application and npm dependencies.
-- `backend/` contains the Flask API, database schema, and Python dependencies.
+- `backend/` contains the Flask entry point, database schema, and Python
+  dependencies. The `nexus_api/` package separates route blueprints, data-source
+  services, and database access.
 
 Build and deploy these applications independently. Serve the frontend build
 (`frontend/dist/`) from a static host or reverse proxy. The backend includes
@@ -25,17 +27,51 @@ Passwords are hashed before storing. The database connection username and passwo
 
 ## MSSQL data source configurations
 
-Configured data sources are stored in `dbo.NexusDataSources`, linked to the signed-in user. API keys, OAuth access tokens, and connector passwords are encrypted before they are written to MSSQL and are never returned to the browser.
+Configured data sources are stored in `dbo.NexusDataSources`, linked to the signed-in user. API keys, OAuth refresh credentials, and connector passwords are encrypted before they are written to MSSQL and are never returned to the browser.
 
-## Frontend structure
+## Source structure
 
-The React source is organized by responsibility:
+The source is grouped by application area and shared code:
 
-- `frontend/src/pages/` contains the landing and dashboard pages.
-- `frontend/src/components/` contains reusable presentation components.
-- `frontend/src/features/` contains authentication and datasource-specific state/storage helpers.
-- `frontend/src/data/` contains datasource provider metadata and logo mappings.
-- `frontend/src/services/` contains API communication helpers.
+```text
+backend/
+  app.py
+  serve.py
+  schema.sql
+  nexus_api/
+    auth_routes.py
+    database.py
+    datasource_routes.py
+    datasource_service.py
+    site24x7_service.py
+frontend/
+  src/
+    App.jsx
+    main.jsx
+    pages/
+      LandingPage.jsx
+    features/
+      auth/
+      dashboard/
+        DashboardPage.jsx
+        DashboardLayout.jsx
+        DashboardRoutes.jsx
+        useDashboardController.js
+        pages/
+      datasources/
+        catalog.js
+        storage.js
+    shared/
+      components/brand/
+      services/
+    assets/
+    App.css
+    index.css
+```
+
+Keep feature-specific screens and logic within their feature folder. Put UI and
+services reused across features in `shared/`; keep application entry points,
+global styles, and static assets at the `src/` level.
 
 Set `VITE_API_BASE_URL` only when the API is hosted on a separate origin. Leave it
 unset when using the included Vite `/api` proxy. Do not put credentials or other
@@ -53,7 +89,17 @@ Then set:
 DATASOURCE_ENCRYPTION_KEY=the_generated_key
 ```
 
-Site24x7 uses an API URL and OAuth access token. Cato uses an API URL, API key, account ID, and one or more comma-separated site IDs.
+Site24x7 uses its regional HTTPS API URL and OAuth client ID, client secret, and
+refresh token. Nexus encrypts those credentials in SQL Server, refreshes the
+access token on the backend, writes live monitor status every 60 seconds, and
+refreshes availability every five minutes. The analysis page reloads stored
+measurements every 30 seconds. Set `SITE24X7_SYNC_INTERVAL_SECONDS` in
+`backend/.env` to adjust the polling interval (minimum 30 seconds). Cato uses an
+API URL, API key, account ID, and one or more comma-separated site IDs.
+
+The Site24x7 collector runs in the backend process and needs outbound HTTPS
+access to the selected Site24x7/Zoho data-center endpoints. No Site24x7
+credentials belong in the frontend or a `VITE_*` setting.
 
 ## Local development
 
@@ -91,28 +137,30 @@ npm run dev
 
 `npm run dev` starts both Flask and Vite; `npm run dev:vite` starts only Vite.
 
-## Production deployment
+## Deploy with Vercel and Render
 
-Build the frontend from `frontend/` and deploy `frontend/dist/` to a static web
-host:
+The deployment configuration is split across `frontend/vercel.json`, the
+repository-root `render.yaml`, and `backend/Dockerfile`. Render builds the API
+image with Microsoft's ODBC Driver 18; Vercel hosts the static Vite frontend.
 
-```powershell
-npm ci
-npm run build
-```
+1. Create a reachable SQL Server database (Azure SQL is one option). Ensure its
+	firewall allows connections from the Render service, and keep its credentials
+	out of source control.
+2. Import the Git repository into Vercel and set the project root directory to
+	`Nexus/frontend`. Deploy once to get the production frontend URL.
+3. Create a Render Blueprint from the repository root using `render.yaml`. Enter
+	the prompted SQL Server values, set `FRONTEND_ORIGIN` to the Vercel production
+	origin, and generate `DATASOURCE_ENCRYPTION_KEY` with the command above.
+	`PORT` is supplied by Render; the service binds to `0.0.0.0` and uses the
+	`/api/health` health check.
+4. Copy the Render service URL and set Vercel's `VITE_API_BASE_URL` environment
+	variable to that origin for Production. Redeploy the frontend so the API
+	origin is included in its build.
 
-Deploy the backend separately. Install `backend/requirements.txt`, provide the
-database and encryption settings as environment variables, and set
-`API_HOST=0.0.0.0`, `PORT` (or `API_PORT`), and `FRONTEND_ORIGIN` to the deployed
-frontend's origin. Start Waitress from `backend/` with:
-
-```powershell
-python serve.py
-```
-
-Set `VITE_API_BASE_URL` to the deployed API origin before building the frontend
-when the API is hosted on a separate origin. Never put credentials or other
-secrets in `VITE_*` variables.
+The Vercel config uses `npm ci`, `npm run build`, and `dist/`. Never put database
+credentials or encryption keys in Vercel variables or any `VITE_*` variable.
+Vercel `VITE_*` values are public in the browser bundle. Render's `sync: false`
+values are entered in the Render dashboard and are not committed to this repo.
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)

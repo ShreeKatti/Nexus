@@ -1,4 +1,4 @@
-import NexusLogo from '../components/brand/NexusLogo.jsx'
+import NexusLogo from '../shared/components/brand/NexusLogo.jsx'
 
 function LandingPage({ mode, showAuth, message, messageType, showSignupSuccess, createdUsername, onOpenAuth, onCloseAuth, onDismissMessage, onSignInNow, onEnterDashboard }) {
   return (
